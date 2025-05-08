@@ -1,27 +1,88 @@
-# Estimativa Neural via Modelo de Equilíbrio Geral Computável
+# Neural Estimation via Computable General Equilibrium (CGE) Inspired Model
 
-Este projeto explora uma abordagem inovadora para estimar os parâmetros de uma rede neural com base em um modelo de Equilíbrio Geral Computável (CGE). A ideia central é simular a produção em cadeias setoriais (z1 → z2 → y), onde os insumos são processados por "setores" análogos a neurônios, e o objetivo final é prever um produto com base em parâmetros lineares encadeados. Essa estrutura permite estimar os pesos da rede diretamente via regressões lineares compostas, sem o uso tradicional de backpropagation. Em seguida, a estimativa é comparada com uma rede neural treinada normalmente com PyTorch (ou scikit-learn, em ambientes mais leves).
+This project explores an innovative method to estimate the internal weights of a neural network using the conceptual structure of a Computable General Equilibrium (CGE) model. Instead of relying solely on backpropagation, we treat each neuron (or layer) as an economic sector, where inputs are transformed into outputs through chained linear equations. This structure enables direct analytical estimation of parameters before comparing them with traditional neural network training.
 
-## Estrutura do Projeto
+## 🧠 Concept
 
-- **Geração de dados sintéticos**: simula relações entre insumo e produto por meio de equações lineares aninhadas.
-- **Modelo CGE-like**: estima os parâmetros da rede com base em um modelo econométrico inspirado na estrutura CGE.
-- **Rede Neural Tradicional**: utiliza PyTorch (ou `MLPRegressor`) para ajustar os pesos via backpropagation.
-- **Avaliação**: as previsões de ambos os modelos são comparadas com métricas de acurácia, incluindo RMSE e R².
+The neural network is represented as a series of linear transformations:
 
-## Requisitos
+```
+x (input) → z1 (sector 1) → z2 (sector 2) → y (final output)
+```
+
+Each sector is modeled as:
+
+```
+z1 = a1 + b1 * x  
+z2 = a2 + b2 * z1  
+y  = a3 + b3 * z2
+```
+
+These equations are optimized by minimizing the mean squared error between predicted and observed outputs, giving us an economic-inspired way to approximate neural weights.
+
+## 📊 Comparison with Backpropagation
+
+After estimating the parameters via this CGE-style model, we compare it with a neural network trained with PyTorch using backpropagation. Both models are trained and evaluated on the same synthetic data.
+
+## 📈 Visual Outputs
+
+The project includes side-by-side visualizations of:
+- Real vs. predicted outputs for both models
+- Residuals (errors)
+- Accuracy metrics (R² and RMSE)
+
+You can expect plots like the following (to be added):
+- ![Prediction Comparison](images/prediction_comparison.png)
+- ![Residual Plot](images/residuals.png)
+
+## 📁 Project Structure
+
+```
+/cge_neural_estimation
+├── cge_model.py         # CGE-based estimation logic
+├── neural_net.py        # PyTorch or sklearn-based model
+├── metrics.py           # Accuracy measures like R², RMSE
+├── generate_data.py     # Synthetic data generation
+├── plots/               # Output images and comparisons
+└── main.py              # Script to run the full pipeline
+```
+
+## 🧪 Evaluation Metrics
+
+We evaluate both models using the following:
+
+- **R² (Coefficient of Determination)**: How well the model explains the variance in the data.
+- **RMSE (Root Mean Squared Error)**: Average deviation between predicted and true values.
+
+```python
+def r2_score_manual(y_true, y_pred):
+    ss_res = np.sum((y_true - y_pred) ** 2)
+    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+    return 1 - (ss_res / ss_tot)
+```
+
+## 📦 Requirements
 
 - Python 3.7+
 - NumPy
 - Matplotlib
 - SciPy
-- (Opcional) PyTorch ou scikit-learn
+- PyTorch *(or alternatively scikit-learn)*
 
-## Resultados Esperados
+Install requirements via:
+```bash
+pip install -r requirements.txt
+```
 
-- Curvas de previsão comparando a abordagem baseada em CGE com a rede neural tradicional.
-- Métricas de desempenho (R² e RMSE) para avaliação da acurácia de ambas as abordagens.
+## 🧭 Motivation
 
-## Contribuição
+This project bridges machine learning and economic modeling, proposing a new way to **analytically initialize** or estimate neural parameters. It may reduce the need for expensive training and offer interpretability to neural networks using economic intuition.
 
-Esta metodologia busca aproximar conceitos de economia computacional e aprendizado de máquina. Ela pode ser útil para pesquisadores que desejam interpretar redes neurais como sistemas de produção encadeados, onde cada camada tem um significado econômico claro.
+## 👨‍💻 Author
+
+**Jeronymo Marcondes Pinto, PhD*  
+**Martha Regina Meira Bianchi, PhD* 
+
+---
+
+*This project is a conceptual prototype combining CGE theory and neural networks. It aims to inspire interdisciplinary innovation between Economics and AI.*
