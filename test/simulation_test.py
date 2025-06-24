@@ -16,8 +16,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # =============================================================================
 # Parameters
 # =============================================================================
-epochs = 2000
-learning_rate = 0.0001
+epochs = 1000
+learning_rate = 0.01
 number_of_features = 3
 
 # =============================================================================
@@ -333,6 +333,10 @@ def cosine_similarity(vec1, vec2):
 similarity_cobb_douglas = cosine_similarity(real_feature_impact, cobb_douglas_feature_impact)
 similarity_neural_network = cosine_similarity(real_feature_impact, neural_network_feature_impact)
 similarity_neural_network_shap = cosine_similarity(real_feature_impact, impact_percent)
+
+
+normalized_cobb_douglas_feature_impact = cobb_douglas_feature_impact / sum(cobb_douglas_feature_impact)
+similarity_normalized_cobb_douglas = cosine_similarity(real_feature_impact, normalized_cobb_douglas_feature_impact)
 
 # =============================================================================
 # =============================================================================
