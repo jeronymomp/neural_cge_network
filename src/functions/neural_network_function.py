@@ -8,6 +8,16 @@ import torch.optim as optim
 # =============================================================================
 # Flexible Neural Network
 # =============================================================================
+# =============================================================================
+# Packages
+# =============================================================================
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# =============================================================================
+# Flexible Neural Network
+# =============================================================================
 class FlexibleNeuralNetwork:
     def __init__(self, X_train, X_valid, X_test, y_train, y_valid, y_test):
         self.X_train_tensor = torch.from_numpy(X_train).float()
@@ -107,7 +117,16 @@ class FlexibleNeuralNetwork:
         if verbose:
             print(f"Test Loss: {test_loss.item():.4f}")
 
-        return model, train_losses, val_losses, best_val_loss, test_loss.item()
+        # Construir descrição da arquitetura da rede
+        architecture = []
+        for layer in model.model:
+            architecture.append(str(layer))
+
+        # Obter pesos (state_dict)
+        weights = model.state_dict()
+
+        return model, train_losses, val_losses, best_val_loss, test_loss.item(), architecture, weights
+
 
 # =============================================================================
 # =============================================================================
