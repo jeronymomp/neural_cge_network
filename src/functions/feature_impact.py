@@ -4,7 +4,9 @@
 import shap
 import torch
 import numpy as np
+from scipy.stats import spearmanr
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics.pairwise import cosine_similarity
 
 # =============================================================================
 # 2 - Feature Impact
@@ -157,16 +159,64 @@ def compute_shap_impact_percent(model, X_train, X_test, y_train,
 
 #-----------
 # Function 5 - Cosine Similarity
-def cosine_similarity(vec1, vec2):
-    """Calculate cosine similarity between two vectors."""
-    vec1 = np.array(vec1)
-    vec2 = np.array(vec2)
-    dot_product = np.dot(vec1, vec2)
-    norm_vec1 = np.linalg.norm(vec1)
-    norm_vec2 = np.linalg.norm(vec2)
-    if norm_vec1 == 0 or norm_vec2 == 0:
-        return 0  # avoid division by zero
-    return dot_product / (norm_vec1 * norm_vec2)
+def compare_importance_cosine(a, b):
+    """
+    Computes the cosine similarity between two normalized importance vectors.
+
+    This method evaluates how similar the direction and distribution of importance is
+    between two models. The result ranges from 0 (completely dissimilar) to 1 (identical direction).
+
+    Args:
+        a (np.ndarray): 1D array of importance values from model A.
+        b (np.ndarray): 1D array of importance values from model B.
+
+    Returns:
+        float: Cosine similarity between the two normalized importance vectors.
+    """
+    a_norm = normalize_importance(a).reshape(1, -1)
+    b_norm = normalize_importance(b).reshape(1, -1)
+    return cosine_similarity(a_norm, b_norm)[0][0]
+
+#-----------
+# Function 6 - Normalize Importance
+def normalize_importance(array):
+    """
+    Normalizes an array of feature importance values so that they sum to 1.
+
+    This is useful for comparing relative importance across features or models.
+    The function takes the absolute value of each element to ignore sign.
+
+    Args:
+        array (np.ndarray): 1D array of importance values (can be positive or negative).
+
+    Returns:
+        np.ndarray: Normalized array of the same shape, with values summing to 1.
+    """
+    array = np.abs(array)
+    total = array.sum()
+    return array / total if total != 0 else array
+
+#-----------
+# Function 7 - Importance Spearmean
+def compare_importance_spearman(a, b):
+    """
+    Compares the relative importance rankings of two coefficient arrays using Spearman correlation.
+
+    This method evaluates the monotonic relationship between the normalized importances
+    of two sets of features. A value of 1.0 indicates perfect agreement in ranking,
+    -1.0 indicates reversed ranking, and 0.0 means no correlation.
+
+    Args:
+        a (np.ndarray): 1D array of importance values from model A.
+        b (np.ndarray): 1D array of importance values from model B.
+
+    Returns:
+        float: Spearman rank correlation coefficient between the normalized vectors.
+    """
+    a_norm = normalize_importance(a)
+    b_norm = normalize_importance(b)
+    corr, _ = spearmanr(a_norm, b_norm)
+    return corr
 
 #-----------------------------------------------------------------------------#
 
