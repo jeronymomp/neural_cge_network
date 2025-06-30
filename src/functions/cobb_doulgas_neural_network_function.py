@@ -10,13 +10,14 @@ from src.functions.cobb_douglas_act_function import CobbDouglasActivationFunctio
 # Cobb-Douglas Neural Network Wrapper
 # =============================================================================
 class CobbDouglasNeuralNetwork:
-    def __init__(self, X_train, X_valid, X_test, y_train, y_valid, y_test):
-        self.X_train_tensor = torch.from_numpy(X_train).float()
-        self.y_train_tensor = torch.from_numpy(y_train).float()
-        self.X_valid_tensor = torch.from_numpy(X_valid).float()
-        self.y_valid_tensor = torch.from_numpy(y_valid).float()
-        self.X_test_tensor = torch.from_numpy(X_test).float()
-        self.y_test_tensor = torch.from_numpy(y_test).float()
+    def __init__(self, X_train, X_valid, X_test, y_train, y_valid, y_test, device = None):
+        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.X_train_tensor = torch.from_numpy(X_train).float().to(self.device)
+        self.y_train_tensor = torch.from_numpy(y_train).float().to(self.device)
+        self.X_valid_tensor = torch.from_numpy(X_valid).float().to(self.device)
+        self.y_valid_tensor = torch.from_numpy(y_valid).float().to(self.device)
+        self.X_test_tensor = torch.from_numpy(X_test).float().to(self.device)
+        self.y_test_tensor = torch.from_numpy(y_test).float().to(self.device)
 
     def train_model(
         self,
@@ -66,7 +67,7 @@ class CobbDouglasNeuralNetwork:
                 return self.model(x)
 
         # Instanciação da rede e do otimizador
-        model = Net()
+        model = Net().to(self.device)
         criterion = loss_fn()
         optimizer = optimizer_class(model.parameters(), **optimizer_kwargs)
 

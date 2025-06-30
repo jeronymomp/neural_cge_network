@@ -66,15 +66,15 @@ torch.backends.cudnn.benchmark = False     # Disable Non Determinístic
 # =============================================================================
 # Starting Loop
 # =============================================================================
-for i in range(0,1):
+for i in range(0,10000):
     # Generate random sample
     random_state = random.randint(0,10000000)
     # Generate Random Number of Features
     number_of_features = random.randint(1,10)
     # Generate Random Number of layers
-    number_of_layers = random.randint(1,5)
+    number_of_layers = random.randint(1,3)
     # Generate Random Number of Neurons
-    neural_network_hidden_layers = [random.randint(0, 100) for _ in range(number_of_layers)]  
+    neural_network_hidden_layers = [random.randint(0, 64) for _ in range(number_of_layers)]  
     
 # =============================================================================
 # 3 - Data Generation and Preparation
@@ -222,8 +222,10 @@ for i in range(0,1):
         'nn_spearman': nn_spearman,
         'nn_cossine': nn_cossine,
         'nn_shap_spearman': nn_shap_spearman,
-        'nn_shap_cossine': nn_shap_cossine
+        'nn_shap_cossine': nn_shap_cossine,
+        'number_of_features': number_of_features,
+        'neural_network_hidden_layers': neural_network_hidden_layers
     })
-
+    
 # =============================================================================
 # =============================================================================

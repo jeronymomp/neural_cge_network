@@ -1,3 +1,16 @@
+"""
+Functions:
+    compute_linear_regression_feature_impact_percent
+    cobb_douglas_impact
+    model_alphas
+    compute_shap_impact_percent
+    compare_importance_cosine
+    normalize_importance
+    compare_importance_spearman
+    
+@author: jeronymo
+"""
+
 # =============================================================================
 # 1 - Packages
 # =============================================================================
@@ -130,29 +143,21 @@ def compute_shap_impact_percent(model, X_train, X_test, y_train,
     """
     model.eval()
 
-    # Select background and test samples (limited to data size)
     background = X_train[:min(background_size, len(X_train))]
     test_samples = X_test[:min(test_sample_size, len(X_test))]
 
-    # Convert to PyTorch tensors
-    background_tensor = torch.from_numpy(background).float()
-    test_tensor = torch.from_numpy(test_samples).float()
+    device = next(model.parameters()).device  # pega a device do modelo
 
-    # Create SHAP GradientExplainer
+    background_tensor = torch.from_numpy(background).float().to(device)
+    test_tensor = torch.from_numpy(test_samples).float().to(device)
+
     explainer = shap.GradientExplainer(model, background_tensor)
-
-    # Compute SHAP values
     shap_values = explainer.shap_values(test_tensor)
     if isinstance(shap_values, list):
         shap_values = shap_values[0]
 
-    # Compute mean absolute SHAP value per feature
     mean_abs_shap = np.mean(np.abs(shap_values), axis=0)
-
-    # Compute mean of target (used to normalize)
     mean_output = np.mean(np.abs(y_train))
-
-    # Compute percentage impact relative to the mean output
     impact_percent = (mean_abs_shap / mean_output) * 100
 
     return impact_percent
