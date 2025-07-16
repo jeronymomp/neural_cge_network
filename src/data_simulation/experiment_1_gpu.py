@@ -38,6 +38,8 @@ from src.functions.result_analysis import generate_average_metrics_separated
 # 2 - Parameters
 # =============================================================================
 result_list = []
+# IMPORTANT - Simulation experiment number
+experiment_number = 1
 
 #--------
 # 2.1 - Experiment Parameters
@@ -324,7 +326,17 @@ for i in range(0,1000):
 # 9 - Final Results
 # =============================================================================
 df, df_cosine_mean, df_spearman_mean, df_mae_mean, df_mse_mean = generate_average_metrics_separated(result_list)
+
+# Save results
+wkdir = "/home/jeronymo/Documentos/neural_cge_network/src/data_simulation/Results/Experiment_" + str(experiment_number)
+os.chdir(wkdir)
+
 df.to_csv('simulation_result.csv', index=False)
+df_cosine_mean.to_csv('df_cosine_mean_result.csv', index=False)
+df_spearman_mean.to_csv('df_spearman_mean_result.csv', index=False)
+df_mae_mean.to_csv('df_mae_mean_result.csv', index=False)
+df_mse_mean.to_csv('df_mse_mean_result.csv', index=False)
+
 
 # =============================================================================
 # =============================================================================
