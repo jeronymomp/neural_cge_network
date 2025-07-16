@@ -223,6 +223,50 @@ def compare_importance_spearman(a, b):
     corr, _ = spearmanr(a_norm, b_norm)
     return corr
 
+#-----------
+# Function 8 - Log Cobbb Douglas Impact
+def cobb_douglas_log_impact(layers_exponents, feature_index, normalize=False):
+    """
+    Computes the cumulative influence of a specific input feature on the final output
+    of a Cobb-Douglas neural network operating in log-space.
+
+    In the log-space formulation, the network applies additive transformations instead 
+    of multiplicative ones. The feature impact is propagated through each layer by matrix 
+    multiplication, simulating the effect of a unit feature signal.
+
+    Args:
+        layers_exponents (list of np.ndarray): A list of exponent matrices (alphas) 
+            for each layer of the network. Each matrix should have shape 
+            (output_dim, input_dim).
+        feature_index (int): The index of the input feature for which to compute the impact.
+        normalize (bool): If True, the result is normalized by the total impact 
+            across all input features, returning a fraction in [0, 1].
+
+    Returns:
+        float: The raw or normalized cumulative impact of the specified feature 
+        on the final network output.
+    """
+    # Unit vector to simulate isolated influence of the selected feature
+    impact_vector = np.zeros(layers_exponents[0].shape[1])
+    impact_vector[feature_index] = 1.0
+
+    # Forward propagate through all exponent (alpha) layers in log-space
+    for layer_exp in layers_exponents:
+        impact_vector = layer_exp @ impact_vector  # shape: (output_dim,)
+
+    total_impact = impact_vector.sum()
+
+    if normalize:
+        total_sum = sum(
+            cobb_douglas_log_impact(layers_exponents, i, normalize=False)
+            for i in range(layers_exponents[0].shape[1])
+        )
+        total_impact = total_impact / total_sum if total_sum != 0 else 0.0
+
+    return total_impact
+
+
+
 #-----------------------------------------------------------------------------#
 
 # =============================================================================
