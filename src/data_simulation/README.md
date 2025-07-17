@@ -24,35 +24,13 @@ Each experiment varies in terms of the data-generating process (linear or nonlin
 
 ---
 
-### 3️⃣ Nonlinear Multiplicative Model (All Features Used)
-- **Type**: Nonlinear multiplicative model
+### 3️⃣ Logarithmic Model (All Features Used)
+- **Type**: Linear-Log model
 - **Features**: `x` features selected randomly
-- **Target**: All features interact multiplicatively (e.g., `y = x1 * x2 * ... * xn + noise`)
-- **Purpose**: Evaluate performance on complex feature interactions
+- **Target**: All `x` features contribute to the target
+- **Purpose**: Understand model performance when all features are relevant
+- - **Form**: `log(y) = b1*log(a1) + b2*log(a2) + ... + noise)`
 
----
-
-### 4️⃣ Nonlinear Multiplicative Model (Subset of Features Used)
-- **Type**: Nonlinear multiplicative model
-- **Features**: `x` features selected randomly
-- **Target**: Only `y < x` features interact multiplicatively
-- **Purpose**: Introduce irrelevant features into complex nonlinear models
-
----
-
-### 5️⃣ Logarithmic Model
-- **Type**: Nonlinear log model
-- **Form**: `y = log(a1 * x1 + a2 * x2 + ... + noise)`
-- **Purpose**: Analyze model behavior when the target grows logarithmically with feature input
-
----
-
-### 6️⃣ Polynomial Model
-- **Type**: Nonlinear polynomial model
-- **Form**: `y = a1 * x1^2 + a2 * x2^2 + ... + noise`
-- **Purpose**: Observe how well models adapt to polynomial relationships in the data
-
----
 
 ### 7️⃣ Suggested Future Model: Piecewise Linear Model
 - **Type**: Hybrid model
