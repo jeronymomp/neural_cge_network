@@ -39,7 +39,7 @@ from src.functions.result_analysis import generate_average_metrics_separated
 # =============================================================================
 result_list = []
 # IMPORTANT - Simulation experiment number
-experiment_number = 1
+experiment_number = 3
 
 #--------
 # 2.1 - Experiment Parameters
