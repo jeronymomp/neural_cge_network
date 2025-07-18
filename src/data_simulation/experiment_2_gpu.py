@@ -19,21 +19,27 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from captum.attr import LayerConductance, LayerActivation, LayerIntegratedGradients
+from captum.attr import IntegratedGradients, DeepLift, GradientShap, NoiseTunnel, FeatureAblation
 
 # Built-in
 from src.functions.linear_data_generator import LinearDataGenerator
 from src.functions.feature_impact import compute_linear_regression_feature_impact_percent
-from src.functions.feature_impact import cobb_douglas_impact,model_alphas,compute_shap_impact_percent
+from src.functions.feature_impact import cobb_douglas_impact,cobb_douglas_log_impact,model_alphas,compute_shap_impact_percent
 from src.functions.feature_impact import compare_importance_cosine,normalize_importance,compare_importance_spearman
 from src.functions.neural_network_function import FlexibleNeuralNetwork
 from src.functions.cobb_douglas_act_function import CobbDouglasActivationFunction
+from src.functions.log_cobb_douglas_act_function import CobbDouglasLogActivationFunction
 from src.functions.cobb_doulgas_neural_network_function import CobbDouglasNeuralNetwork
+from src.functions.log_cobb_doulgas_neural_network_function import LogCobbDouglasNeuralNetwork
 from src.functions.result_analysis import generate_average_metrics_separated
 
 # =============================================================================
 # 2 - Parameters
 # =============================================================================
 result_list = []
+# IMPORTANT - Simulation experiment number
+experiment_number = 2
 
 #--------
 # 2.1 - Experiment Parameters
@@ -162,7 +168,7 @@ for i in range(0,1000):
     # =============================================================================
     # 5 - Cobb-Douglas Neural Network
     # =============================================================================
-    cobb_fnn = CobbDouglasNeuralNetwork(X_train, X_valid, X_test, y_train, y_valid, y_test, device = device)
+    cobb_fnn = LogCobbDouglasNeuralNetwork(X_train, X_valid, X_test, y_train, y_valid, y_test, device = device)
     
     cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
         hidden_layers=neural_network_hidden_layers,
@@ -198,12 +204,12 @@ for i in range(0,1000):
     cobb_layers = model_alphas(cobb_weights)
     
     cobb_douglas_feature_impact = [
-        cobb_douglas_impact(cobb_layers, i, normalize=False)
+        cobb_douglas_log_impact(cobb_layers, i, normalize=False)
         for i in range(cobb_layers[0].shape[1])
     ]
     
     cobb_douglas_normalized_impact = [
-        cobb_douglas_impact(cobb_layers, i, normalize=True)
+        cobb_douglas_log_impact(cobb_layers, i, normalize=True)
         for i in range(cobb_layers[0].shape[1])
     ]
     
@@ -223,6 +229,40 @@ for i in range(0,1000):
     
     # SHAP values percentage impact
     shap_impact_percent = compute_shap_impact_percent(fnn_model, X_train, X_test, y_train)
+    
+    # CAPTUM algorithms
+    ig = IntegratedGradients(fnn_model)
+    ig_nt = NoiseTunnel(ig)
+    dl = DeepLift(fnn_model)
+    gs = GradientShap(fnn_model)
+    fa = FeatureAblation(fnn_model)
+
+    ig_attr_test = ig.attribute(X_test_tensor, n_steps=50)
+    ig_nt_attr_test = ig_nt.attribute(X_test_tensor)
+    dl_attr_test = dl.attribute(X_test_tensor)
+    gs_attr_test = gs.attribute(X_test_tensor, X_train_tensor)
+    fa_attr_test = fa.attribute(X_test_tensor)
+    
+    # Integrated Gradients
+    importances_ig = ig_attr_test.abs().mean(dim=0) 
+    importances_ig = importances_ig.detach().cpu().numpy()
+    
+    # Deeplift
+    importances_dl = dl_attr_test.abs().mean(dim=0) 
+    importances_dl = importances_dl.detach().cpu().numpy()
+    
+    # GradientShap
+    importances_gs = gs_attr_test.abs().mean(dim=0) 
+    importances_gs = importances_gs.detach().cpu().numpy()
+    
+    # Feature Ablation
+    importances_fa = fa_attr_test.abs().mean(dim=0) 
+    importances_fa = importances_fa.detach().cpu().numpy()
+    
+    # Noise Tunnel
+    importances_nt = ig_nt_attr_test.abs().mean(dim=0) 
+    importances_nt = importances_nt.detach().cpu().numpy()
+
 
     # =============================================================================
     # 8 - Results Aggregation
@@ -231,14 +271,32 @@ for i in range(0,1000):
     b_norm = normalize_importance(cobb_douglas_feature_impact)
     c_norm = normalize_importance(neural_network_feature_impact)
     
+    # Coob Douglas Results
     cobb_spearman = compare_importance_spearman(real_feature_impact, cobb_douglas_feature_impact)
     cobb_cossine = compare_importance_cosine(real_feature_impact, cobb_douglas_feature_impact)
     
+    # Neural Network Results
+    # Basic Impact
     nn_spearman = compare_importance_spearman(real_feature_impact, neural_network_feature_impact)
     nn_cossine = compare_importance_cosine(real_feature_impact, neural_network_feature_impact)
-    
+    # Shap Value
     nn_shap_spearman = compare_importance_spearman(real_feature_impact, shap_impact_percent)
     nn_shap_cossine = compare_importance_cosine(real_feature_impact, shap_impact_percent)
+    # Integrated Gradient
+    nn_shap_spearman_ig = compare_importance_spearman(real_feature_impact, importances_ig)
+    nn_shap_cossine_ig = compare_importance_cosine(real_feature_impact, importances_ig)  
+    # Deeplift
+    nn_shap_spearman_dl = compare_importance_spearman(real_feature_impact, importances_dl)
+    nn_shap_cossine_dl = compare_importance_cosine(real_feature_impact, importances_dl)  
+    # GradientShap
+    nn_shap_spearman_gs = compare_importance_spearman(real_feature_impact, importances_gs)
+    nn_shap_cossine_gs = compare_importance_cosine(real_feature_impact, importances_gs)  
+    # Feature Ablation
+    nn_shap_spearman_fa = compare_importance_spearman(real_feature_impact, importances_fa)
+    nn_shap_cossine_fa = compare_importance_cosine(real_feature_impact, importances_fa)  
+    # Noise Tunnel
+    nn_shap_spearman_nt = compare_importance_spearman(real_feature_impact, importances_nt)
+    nn_shap_cossine_nt = compare_importance_cosine(real_feature_impact, importances_nt)          
 
     # Store results   
     # Time elapsed
@@ -247,24 +305,32 @@ for i in range(0,1000):
     
     # Save as List
     lst_result = [
-    ('mae_nn', mae_nn),
-    ('mae_cobb_nn', mae_cobb_nn),
-    ('mse_nn', mse_nn),
-    ('mse_cobb_nn', mse_cobb_nn),
-    ('cobb_spearman', cobb_spearman),
-    ('cobb_cossine', cobb_cossine),
-    ('nn_spearman', nn_spearman),
-    ('nn_cossine', nn_cossine),
-    ('nn_shap_spearman', nn_shap_spearman),
-    ('nn_shap_cossine', nn_shap_cossine),
-    ('elapsed_time', elapsed_time),
-    ('number_of_features', number_of_features),
-    ('neural_network_hidden_layers', neural_network_hidden_layers),
-    ('activition_function',activition_function),
-    ('dropout',dropout),
-    ('real_coefs',real_feature_impact),
-    ('cobb_coefs',cobb_douglas_feature_impact),
-    ('nn_coefs',neural_network_feature_impact)]
+        ('mae_nn', mae_nn),
+        ('mae_cobb_nn', mae_cobb_nn),
+        ('mse_nn', mse_nn),
+        ('mse_cobb_nn', mse_cobb_nn),
+        ('cobb_spearman', cobb_spearman),
+        ('cobb_cossine', cobb_cossine),
+        ('nn_spearman', nn_spearman),
+        ('nn_cossine', nn_cossine),
+        ('nn_spearman_ig', nn_shap_spearman_ig),
+        ('nn_cossine_ig', nn_shap_cossine_ig),
+        ('nn_shap_spearman', nn_shap_spearman),
+        ('nn_shap_cossine', nn_shap_cossine),
+        ('nn_shap_spearman_dl', nn_shap_spearman_dl),
+        ('nn_shap_cossine_dl', nn_shap_cossine_dl),
+        ('nn_shap_spearman_gs', nn_shap_spearman_gs),
+        ('nn_shap_cossine_gs', nn_shap_cossine_gs),
+        ('nn_shap_spearman_fa', nn_shap_spearman_fa),
+        ('nn_shap_cossine_fa', nn_shap_cossine_fa),
+        ('nn_shap_spearman_nt', nn_shap_spearman_nt),
+        ('nn_shap_cossine_nt', nn_shap_cossine_nt),
+        ('elapsed_time', elapsed_time),
+        ('number_of_features', number_of_features),
+        ('neural_network_hidden_layers', neural_network_hidden_layers),
+        ('activition_function', activition_function),
+        ('dropout', dropout)
+    ]
 
     result_list.append(lst_result)
     
@@ -272,7 +338,16 @@ for i in range(0,1000):
 # 9 - Final Results
 # =============================================================================
 df, df_cosine_mean, df_spearman_mean, df_mae_mean, df_mse_mean = generate_average_metrics_separated(result_list)
+
+# Save results
+wkdir = "/home/jeronymo/Documentos/neural_cge_network/src/data_simulation/Results/Experiment_" + str(experiment_number)
+os.chdir(wkdir)
+
 df.to_csv('simulation_result.csv', index=False)
+df_cosine_mean.to_csv('df_cosine_mean_result.csv', index=False)
+df_spearman_mean.to_csv('df_spearman_mean_result.csv', index=False)
+df_mae_mean.to_csv('df_mae_mean_result.csv', index=False)
+df_mse_mean.to_csv('df_mse_mean_result.csv', index=False)
 
 # =============================================================================
 # =============================================================================
