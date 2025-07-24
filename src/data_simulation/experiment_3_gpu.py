@@ -45,9 +45,16 @@ experiment_number = 3
 # 2.1 - Experiment Parameters
 sample_size = 10000
 number_of_features = 5
-random_state = 1
+random_state = experiment_number
 test_sample_size = 0.2
 valid_sample_size = 0.2
+
+#---
+# Cobb Douglas generation parameters
+min_data = 1
+max_data = 10
+normalize = np.random.choice([True, False])
+intercept_one = np.random.choice([True, False])
 
 #--------
 # Neural Network Parameters
@@ -113,10 +120,7 @@ for i in range(0,1000):
     # =============================================================================
     # Generate Simulated Data
     linear_data_generator = LinearDataGenerator(sample_size,number_of_features,random_state)
-    X, y, coef = linear_data_generator.generate_log_cobb_douglas_data()
-    
-    X = np.abs(X)
-    y = np.abs(y)
+    X, y, coef = linear_data_generator.generate_log_cobb_douglas_data(min_data, max_data, normalize, intercept_one)
     
     # Percentual Impact Impact
     real_feature_impact = coef

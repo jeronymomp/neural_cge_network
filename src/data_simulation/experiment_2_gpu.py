@@ -45,7 +45,7 @@ experiment_number = 2
 # 2.1 - Experiment Parameters
 sample_size = 10000
 number_of_features = 5
-random_state = 1
+random_state = experiment_number
 test_sample_size = 0.2
 valid_sample_size = 0.2
 
