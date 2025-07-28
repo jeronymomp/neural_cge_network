@@ -31,6 +31,16 @@ Each experiment varies in terms of the data-generating process (linear or nonlin
 - **Purpose**: Understand model performance when all features are relevant
 - - **Form**: `log(y) = b1*log(a1) + b2*log(a2) + ... + noise)`
 
+---
+
+### 4️⃣ Logarithmic Model (Subset of Features Used)
+- **Type**: Linear-Log model
+- **Features**: `x` features selected randomly
+- **Target**: All `x` features contribute to the target
+- **Purpose**: Understand model performance when all features are relevant
+- - **Form**: `log(y) = b1*log(a1) + b2*log(a2) + ... + noise)`
+
+---
 
 ### 7️⃣ Suggested Future Model: Piecewise Linear Model
 - **Type**: Hybrid model
