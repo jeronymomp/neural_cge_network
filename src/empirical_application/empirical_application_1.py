@@ -38,6 +38,10 @@ from src.functions.result_analysis import generate_average_metrics_separated
 # =============================================================================
 # 2 - Parameters
 # =============================================================================
+random_state = 0
+test_sample_size = 0.1
+valid_sample_size = 0.1
+n_samples = 500
 
 #--------
 # 2.1 - Experiment Parameters
@@ -61,6 +65,7 @@ gdp_percapita_start_variable_name = 'gdp_percapita_start'
 # Set of variables from regression
 y_experiment_1 = [gdp_growth_avg_variable_name]
 x_experiment_1 = [pop_growth_avg_variable_name,inv_rate_avg_variable_name,gdp_percapita_start_variable_name]
+number_of_features = len(x_experiment_1)
 
 #--------
 # Neural Network Parameters
@@ -136,15 +141,286 @@ experiment_1_df = experiment_1_df.merge(inv_rate_avg[['countrycode', 'inv_rate_a
 experiment_1_df = experiment_1_df.merge(starting_income[['countrycode', 'gdp_percapita_start']], on='countrycode', how='left')
 experiment_1_df = experiment_1_df.dropna()
 
+# 3.6 Train Test Split (with numpy)
+y = experiment_1_df[y_experiment_1]
+x = experiment_1_df[x_experiment_1]
+X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_sample_size, random_state=random_state)
+X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=valid_sample_size, random_state=random_state)
+
+# 3.7 Adjust to numpy array for FNN
+X_train_tensor = torch.from_numpy(X_train.values).float().to(device)
+X_valid_tensor = torch.from_numpy(X_valid.values).float().to(device)
+X_test_tensor  = torch.from_numpy(X_test.values).float().to(device)
+
+y_train_tensor = torch.from_numpy(y_train.values).float().to(device)
+y_valid_tensor = torch.from_numpy(y_valid.values).float().to(device)
+y_test_tensor  = torch.from_numpy(y_test.values).float().to(device)
+
 # =============================================================================
 # 4 - Linear Regression
 # =============================================================================
-y = experiment_1_df[y_experiment_1]
-x = experiment_1_df[x_experiment_1]
 model = LinearRegression()
-model.fit(x, y)
-real_coef = model.coef_
+model.fit(X_train, y_train)
+real_feature_impact = model.coef_.flatten().tolist()
 
 # =============================================================================
-# 5 - Neural Networks
+# 5 - Neural Networks Random Config Params and Random Search for Base NN
 # =============================================================================
+# 5.1 Function to perform random search
+def generate_random_config(number_of_features):
+    number_of_layers = random.randint(1, 5)
+    max_neurons = min(32, 4 * number_of_features)
+    hidden_layers = sorted(
+        [random.randint(number_of_features, max_neurons) for _ in range(number_of_layers)],
+        reverse=True
+    )
+    dropout = random.choice([0.2, 0.3, 0.4, 0.5])
+    activation_function = random.choice([
+        nn.ReLU,
+        nn.Sigmoid,
+        nn.Tanh,
+        nn.LeakyReLU,
+        nn.ELU,
+        nn.GELU,
+        nn.SELU,
+        nn.Softplus
+    ])
+    return {
+        "neural_network_hidden_layers": hidden_layers,
+        "dropout": dropout,
+        "activation": activation_function
+    }
+
+# 5.2 Generate n samples
+random_configs = [generate_random_config(number_of_features) for _ in range(n_samples)]
+
+# 5.3 Apply Random search on Base NN Architecture
+result_random_search = []
+
+for random_param in random_configs:
+    fnn = FlexibleNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+    fnn_model, fnn_train_losses, fnn_val_losses, fnn_best_val, fnn_test_loss, fnn_architecture, fnn_weights = fnn.train_model(
+            hidden_layers=random_param['neural_network_hidden_layers'],
+            activation_fn=random_param['activation'],
+            dropout_rate=random_param['dropout'],
+            use_batchnorm=True,
+            epochs=epochs,
+            early_stopping_patience=tries_before_stopping,
+            optimizer_kwargs={"lr": learning_rate}
+        )
+    fnn_model.to(device)
+    predicted_nn = fnn_model(X_test_tensor).detach().cpu().numpy()
+    mse_nn = mean_squared_error(y_test, predicted_nn)
+    result_random_search.append(mse_nn)
+
+# 5.4 Best result
+best_architecture = result_random_search.index(min(result_random_search))
+
+# 5.5 Best Parameters
+neural_network_hidden_layers = random_configs[best_architecture]['neural_network_hidden_layers']
+dropout_rt = random_configs[best_architecture]['dropout']
+activation_fn = random_configs[best_architecture]['activation']
+
+# =============================================================================
+# 6 - Basic Neural Network
+# =============================================================================
+# Initialize model and train on device
+fnn = FlexibleNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+
+fnn_model, fnn_train_losses, fnn_val_losses, fnn_best_val, fnn_test_loss, fnn_architecture, fnn_weights = fnn.train_model(
+hidden_layers=neural_network_hidden_layers,
+activation_fn=activation_fn,
+dropout_rate=dropout_rt,
+use_batchnorm=True,
+epochs=epochs,
+early_stopping_patience=tries_before_stopping,
+optimizer_kwargs={"lr": learning_rate}
+)
+
+# Ensure model is on device
+fnn_model.to(device)
+
+# =============================================================================
+# 7 - Cobb-Douglas Neural Network
+# =============================================================================
+cobb_fnn = LogCobbDouglasNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+
+cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
+hidden_layers=neural_network_hidden_layers,
+dropout_rate=dropout,
+use_batchnorm=False,
+early_stopping_patience=tries_before_stopping,
+epochs=epochs,
+normalized=sum_equal_one,
+optimizer_kwargs={"lr": learning_rate}
+)
+
+cobb_model.to(device)
+
+# =============================================================================
+# 8 - Accuracy
+# =============================================================================
+# X_test_tensor is already on device
+predicted_cobb_nn = cobb_model(X_test_tensor).detach().cpu().numpy()
+predicted_nn = fnn_model(X_test_tensor).detach().cpu().numpy()
+
+# Mean Absolute Error
+mae_nn = mean_absolute_error(y_test, predicted_nn)
+mae_cobb_nn = mean_absolute_error(y_test, predicted_cobb_nn)
+
+# Mean Squared Error
+mse_nn = mean_squared_error(y_test, predicted_nn)
+mse_cobb_nn = mean_squared_error(y_test, predicted_cobb_nn)
+
+# =============================================================================
+# 9 - Sensitivity Analysis
+# =============================================================================
+# Cobb-Douglas Impact calculation
+cobb_layers = model_alphas(cobb_weights)
+    
+cobb_douglas_feature_impact = [
+    cobb_douglas_log_impact(cobb_layers, i, normalize=False)
+    for i in range(cobb_layers[0].shape[1])
+    ]
+    
+cobb_douglas_normalized_impact = [
+    cobb_douglas_log_impact(cobb_layers, i, normalize=True)
+    for i in range(cobb_layers[0].shape[1])
+    ]
+    
+# Neural Network Impact calculation
+neural_network_feature_impact = []
+    
+for i in range(number_of_features):
+    x_test_sensitivity_analysis = X_test_tensor.clone()
+    x_test_sensitivity_analysis[:, i] *= 1.01
+    
+    base_predicted_nn = fnn_model(X_test_tensor)
+    predicted_nn_sensitivity_analysis = fnn_model(x_test_sensitivity_analysis)
+        
+    diff = torch.abs(predicted_nn_sensitivity_analysis - base_predicted_nn)
+    mae = diff.mean()
+    neural_network_feature_impact.append(mae.item())
+    
+# SHAP values percentage impact
+shap_impact_percent = compute_shap_impact_percent(fnn_model, X_train.values, X_test.values, y_train.values)
+    
+# CAPTUM algorithms
+ig = IntegratedGradients(fnn_model)
+ig_nt = NoiseTunnel(ig)
+dl = DeepLift(fnn_model)
+gs = GradientShap(fnn_model)
+fa = FeatureAblation(fnn_model)
+
+ig_attr_test = ig.attribute(X_test_tensor, n_steps=50)
+ig_nt_attr_test = ig_nt.attribute(X_test_tensor)
+dl_attr_test = dl.attribute(X_test_tensor)
+gs_attr_test = gs.attribute(X_test_tensor, X_train_tensor)
+fa_attr_test = fa.attribute(X_test_tensor)
+    
+# Integrated Gradients
+importances_ig = ig_attr_test.abs().mean(dim=0) 
+importances_ig = importances_ig.detach().cpu().numpy()
+    
+# Deeplift
+importances_dl = dl_attr_test.abs().mean(dim=0) 
+importances_dl = importances_dl.detach().cpu().numpy()
+    
+# GradientShap
+importances_gs = gs_attr_test.abs().mean(dim=0) 
+importances_gs = importances_gs.detach().cpu().numpy()
+    
+# Feature Ablation
+importances_fa = fa_attr_test.abs().mean(dim=0) 
+importances_fa = importances_fa.detach().cpu().numpy()
+    
+# Noise Tunnel
+importances_nt = ig_nt_attr_test.abs().mean(dim=0) 
+importances_nt = importances_nt.detach().cpu().numpy()
+
+# =============================================================================
+# 10 - Results Aggregation
+# =============================================================================
+a_norm = normalize_importance(real_feature_impact.flatten())
+b_norm = normalize_importance(cobb_douglas_feature_impact)
+c_norm = normalize_importance(neural_network_feature_impact)
+
+# Coob Douglas Results
+cobb_spearman = compare_importance_spearman(real_feature_impact, cobb_douglas_feature_impact)
+cobb_cossine = compare_importance_cosine(real_feature_impact, cobb_douglas_feature_impact)
+
+# Neural Network Results
+# Basic Impact
+nn_spearman = compare_importance_spearman(real_feature_impact, neural_network_feature_impact)
+nn_cossine = compare_importance_cosine(real_feature_impact, neural_network_feature_impact)
+# Shap Value
+nn_shap_spearman = compare_importance_spearman(real_feature_impact, shap_impact_percent)
+nn_shap_cossine = compare_importance_cosine(real_feature_impact, shap_impact_percent)
+# Integrated Gradient
+nn_shap_spearman_ig = compare_importance_spearman(real_feature_impact, importances_ig)
+nn_shap_cossine_ig = compare_importance_cosine(real_feature_impact, importances_ig)  
+# Deeplift
+nn_shap_spearman_dl = compare_importance_spearman(real_feature_impact, importances_dl)
+nn_shap_cossine_dl = compare_importance_cosine(real_feature_impact, importances_dl)  
+# GradientShap
+nn_shap_spearman_gs = compare_importance_spearman(real_feature_impact, importances_gs)
+nn_shap_cossine_gs = compare_importance_cosine(real_feature_impact, importances_gs)  
+# Feature Ablation
+nn_shap_spearman_fa = compare_importance_spearman(real_feature_impact, importances_fa)
+nn_shap_cossine_fa = compare_importance_cosine(real_feature_impact, importances_fa)  
+# Noise Tunnel
+nn_shap_spearman_nt = compare_importance_spearman(real_feature_impact, importances_nt)
+nn_shap_cossine_nt = compare_importance_cosine(real_feature_impact, importances_nt)          
+
+# Save as List
+result_list = []
+
+lst_result = [
+('mae_nn', mae_nn),
+('mae_cobb_nn', mae_cobb_nn),
+('mse_nn', mse_nn),
+('mse_cobb_nn', mse_cobb_nn),
+('cobb_spearman', cobb_spearman),
+('cobb_cossine', cobb_cossine),
+('nn_spearman', nn_spearman),
+('nn_cossine', nn_cossine),
+('nn_spearman_ig', nn_shap_spearman_ig),
+('nn_cossine_ig', nn_shap_cossine_ig),
+('nn_shap_spearman', nn_shap_spearman),
+('nn_shap_cossine', nn_shap_cossine),
+('nn_shap_spearman_dl', nn_shap_spearman_dl),
+('nn_shap_cossine_dl', nn_shap_cossine_dl),
+('nn_shap_spearman_gs', nn_shap_spearman_gs),
+('nn_shap_cossine_gs', nn_shap_cossine_gs),
+('nn_shap_spearman_fa', nn_shap_spearman_fa),
+('nn_shap_cossine_fa', nn_shap_cossine_fa),
+('nn_shap_spearman_nt', nn_shap_spearman_nt),
+('nn_shap_cossine_nt', nn_shap_cossine_nt),
+('number_of_features', number_of_features),
+('neural_network_hidden_layers', neural_network_hidden_layers),
+('activition_function', activition_function),
+('dropout', dropout)
+]
+
+result_list.append(lst_result)
+
+# =============================================================================
+# 9 - Final Results
+# =============================================================================
+df, df_cosine_mean, df_spearman_mean, df_mae_mean, df_mse_mean = generate_average_metrics_separated(result_list)
+
+# Save results
+wkdir = "/home/jeronymo/Documentos/neural_cge_network/src/empirical_application/Results/Experiment 1"
+os.chdir(wkdir)
+
+df.to_csv('simulation_result.csv', index=False)
+df_cosine_mean.to_csv('df_cosine_mean_result.csv', index=False)
+df_spearman_mean.to_csv('df_spearman_mean_result.csv', index=False)
+df_mae_mean.to_csv('df_mae_mean_result.csv', index=False)
+df_mse_mean.to_csv('df_mse_mean_result.csv', index=False)
+
+# =============================================================================
+# =============================================================================
+
+
+
