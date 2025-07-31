@@ -17,6 +17,7 @@ Functions:
 import shap
 import torch
 import numpy as np
+import pandas as pd
 from scipy.stats import spearmanr
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics.pairwise import cosine_similarity
@@ -27,29 +28,25 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 #-----------
 # Function 1 - Linear Regression Percentual Feature Impact 
-def compute_linear_regression_feature_impact_percent(X: np.ndarray, model: LinearRegression) -> np.ndarray:
+def compute_linear_regression_feature_impact_percent(X, model: LinearRegression) -> np.ndarray:
     """
     Computes the average percentage impact of each feature on the model's predictions.
-    
-    The method perturbs each feature by +1% and measures the average relative change
-    in the predicted output.
-
-    Args:
-        X (np.ndarray): Input feature matrix of shape (n_samples, n_features).
-        model (LinearRegression): A trained linear regression model.
-
-    Returns:
-        np.ndarray: A 1D array with the mean percentage impact of each feature.
     """
+    if isinstance(X, pd.DataFrame):
+        X = X.values  # Garante que X seja ndarray
+
     n_features = X.shape[1]
     y_pred_original = model.predict(X)
     impact_vector = []
 
     for i in range(n_features):
         X_perturbed = X.copy()
-        X_perturbed[:, i] *= 1.01  # Increase feature by 1%
+        X_perturbed[:, i] *= 1.01  # Aumenta a feature i em 1%
         y_pred_perturbed = model.predict(X_perturbed)
-        impact_percent = ((y_pred_perturbed - y_pred_original) / y_pred_original) * 100
+
+        safe_denominator = np.where(np.abs(y_pred_original) < 1e-8, 1e-8, y_pred_original)
+        impact_percent = ((y_pred_perturbed - y_pred_original) / safe_denominator) * 100
+
         mean_impact = np.mean(impact_percent)
         impact_vector.append(mean_impact)
 

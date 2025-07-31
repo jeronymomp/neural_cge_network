@@ -16,10 +16,10 @@ import random
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from captum.attr import LayerConductance, LayerActivation, LayerIntegratedGradients
 from captum.attr import IntegratedGradients, DeepLift, GradientShap, NoiseTunnel, FeatureAblation
 
@@ -41,7 +41,7 @@ from src.functions.result_analysis import generate_average_metrics_separated
 random_state = 0
 test_sample_size = 0.1
 valid_sample_size = 0.1
-n_samples = 500
+n_samples = 200
 
 #--------
 # 2.1 - Experiment Parameters
@@ -69,9 +69,10 @@ number_of_features = len(x_experiment_1)
 
 #--------
 # Neural Network Parameters
-epochs = 1000
-neural_network_hidden_layers = [4,3]
-learning_rate = 0.00001
+epochs_nas = 1000
+epochs = 10000
+# neural_network_hidden_layers = [4,3]
+learning_rate = 0.0001
 tries_before_stopping = 5
 
 #--------
@@ -130,6 +131,8 @@ inv_rate_avg = base_df.groupby('countrycode')['inv_rate'].mean().reset_index()
 inv_rate_avg = inv_rate_avg.rename(columns={'inv_rate': inv_rate_avg_variable_name})
 # 3.4.4 Initial Income
 starting_income = base_df[base_df['year'] == start_year][['countrycode', 'gdp_percapita']]
+scaler = StandardScaler()
+starting_income['gdp_percapita'] = scaler.fit_transform(starting_income[['gdp_percapita']]) 
 starting_income = starting_income.rename(columns={'gdp_percapita': gdp_percapita_start_variable_name})
 
 # 3.5 Create Dataframe
@@ -144,6 +147,7 @@ experiment_1_df = experiment_1_df.dropna()
 # 3.6 Train Test Split (with numpy)
 y = experiment_1_df[y_experiment_1]
 x = experiment_1_df[x_experiment_1]
+
 X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_sample_size, random_state=random_state)
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=valid_sample_size, random_state=random_state)
 
@@ -161,7 +165,12 @@ y_test_tensor  = torch.from_numpy(y_test.values).float().to(device)
 # =============================================================================
 model = LinearRegression()
 model.fit(X_train, y_train)
-real_feature_impact = model.coef_.flatten().tolist()
+
+y_pred = model.predict(X_test)
+
+mse_regression = mean_squared_error(y_test, y_pred)
+mae_regression = mean_absolute_error(y_test, y_pred)
+r2_regression = r2_score(y_test, y_pred)
 
 # =============================================================================
 # 5 - Neural Networks Random Config Params and Random Search for Base NN
@@ -204,7 +213,7 @@ for random_param in random_configs:
             activation_fn=random_param['activation'],
             dropout_rate=random_param['dropout'],
             use_batchnorm=True,
-            epochs=epochs,
+            epochs=epochs_nas,
             early_stopping_patience=tries_before_stopping,
             optimizer_kwargs={"lr": learning_rate}
         )
@@ -240,14 +249,63 @@ optimizer_kwargs={"lr": learning_rate}
 # Ensure model is on device
 fnn_model.to(device)
 
+
 # =============================================================================
-# 7 - Cobb-Douglas Neural Network
+# 7 - Cobb Neural Networks Random Config Params and Random Search for Cobb NN
+# =============================================================================
+# 7.1 Function to perform random search
+def generate_random_cobb_config(number_of_features):
+    number_of_layers = random.randint(1, 5)
+    max_neurons = min(32, 4 * number_of_features)
+    hidden_layers = sorted(
+        [random.randint(number_of_features, max_neurons) for _ in range(number_of_layers)],
+        reverse=True
+    )
+    dropout = random.choice([0.2, 0.3, 0.4, 0.5])
+    return {
+        "neural_network_hidden_layers": hidden_layers,
+        "dropout": dropout
+    }
+
+# 7.2 Generate n samples
+random_configs = [generate_random_config(number_of_features) for _ in range(n_samples)]
+
+# 7.3 Apply Random search on Base NN Architecture
+result_random_search = []
+
+for random_param in random_configs:
+    cobb_fnn = LogCobbDouglasNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+
+    cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
+    hidden_layers=random_param['neural_network_hidden_layers'],
+    dropout_rate=random_param['dropout'],
+    use_batchnorm=False,
+    early_stopping_patience=tries_before_stopping,
+    epochs=epochs_nas,
+    normalized=sum_equal_one,
+    optimizer_kwargs={"lr": learning_rate}
+    )
+
+    cobb_model.to(device)
+    predicted_cobb = cobb_model(X_test_tensor).detach().cpu().numpy()
+    mse_cobb = mean_squared_error(y_test, predicted_cobb)
+    result_random_search.append(mse_cobb)
+
+# 7.4 Best result
+best_cobb_architecture = result_random_search.index(min(result_random_search))
+
+# 7.5 Best Parameters
+cobb_hidden_layers = random_configs[best_cobb_architecture]['neural_network_hidden_layers']
+cobb_dropout_rt = random_configs[best_cobb_architecture]['dropout']
+
+# =============================================================================
+# 8 - Cobb-Douglas Neural Network
 # =============================================================================
 cobb_fnn = LogCobbDouglasNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
 
 cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
-hidden_layers=neural_network_hidden_layers,
-dropout_rate=dropout,
+hidden_layers=cobb_hidden_layers,
+dropout_rate=cobb_dropout_rt,
 use_batchnorm=False,
 early_stopping_patience=tries_before_stopping,
 epochs=epochs,
@@ -258,7 +316,7 @@ optimizer_kwargs={"lr": learning_rate}
 cobb_model.to(device)
 
 # =============================================================================
-# 8 - Accuracy
+# 9 - Accuracy
 # =============================================================================
 # X_test_tensor is already on device
 predicted_cobb_nn = cobb_model(X_test_tensor).detach().cpu().numpy()
@@ -272,9 +330,16 @@ mae_cobb_nn = mean_absolute_error(y_test, predicted_cobb_nn)
 mse_nn = mean_squared_error(y_test, predicted_nn)
 mse_cobb_nn = mean_squared_error(y_test, predicted_cobb_nn)
 
+# R Squared
+r2_cobb = r2_score(y_test, predicted_cobb_nn)
+r2_nn = r2_score(y_test, predicted_nn)
+
 # =============================================================================
-# 9 - Sensitivity Analysis
+# 10 - Sensitivity Analysis
 # =============================================================================
+# Real Feature Impact
+real_feature_impact = compute_linear_regression_feature_impact_percent(X_test, model)
+
 # Cobb-Douglas Impact calculation
 cobb_layers = model_alphas(cobb_weights)
     
@@ -298,8 +363,10 @@ for i in range(number_of_features):
     base_predicted_nn = fnn_model(X_test_tensor)
     predicted_nn_sensitivity_analysis = fnn_model(x_test_sensitivity_analysis)
         
-    diff = torch.abs(predicted_nn_sensitivity_analysis - base_predicted_nn)
-    mae = diff.mean()
+    diff = (predicted_nn_sensitivity_analysis - base_predicted_nn) / base_predicted_nn
+    
+    mae = diff.mean() / 0.01
+
     neural_network_feature_impact.append(mae.item())
     
 # SHAP values percentage impact
@@ -339,15 +406,15 @@ importances_nt = ig_nt_attr_test.abs().mean(dim=0)
 importances_nt = importances_nt.detach().cpu().numpy()
 
 # =============================================================================
-# 10 - Results Aggregation
+# 11 - Results Aggregation
 # =============================================================================
-a_norm = normalize_importance(real_feature_impact.flatten())
+a_norm = normalize_importance(real_feature_impact)
 b_norm = normalize_importance(cobb_douglas_feature_impact)
 c_norm = normalize_importance(neural_network_feature_impact)
 
 # Coob Douglas Results
-cobb_spearman = compare_importance_spearman(real_feature_impact, cobb_douglas_feature_impact)
-cobb_cossine = compare_importance_cosine(real_feature_impact, cobb_douglas_feature_impact)
+cobb_spearman = compare_importance_spearman(real_feature_impact, cobb_douglas_normalized_impact)
+cobb_cossine = compare_importance_cosine(real_feature_impact, cobb_douglas_normalized_impact)
 
 # Neural Network Results
 # Basic Impact
@@ -375,11 +442,19 @@ nn_shap_cossine_nt = compare_importance_cosine(real_feature_impact, importances_
 # Save as List
 result_list = []
 
+r2_cobb = r2_score(y_test, predicted_cobb_nn)
+r2_nn = r2_score(y_test, predicted_nn)
+
 lst_result = [
 ('mae_nn', mae_nn),
+('mae_regression', mae_regression),
 ('mae_cobb_nn', mae_cobb_nn),
+('r2_cobb', r2_cobb),
+('r2_nn', r2_nn),
+('r2_regression', r2_regression),
 ('mse_nn', mse_nn),
 ('mse_cobb_nn', mse_cobb_nn),
+('mse_regression', mse_regression),
 ('cobb_spearman', cobb_spearman),
 ('cobb_cossine', cobb_cossine),
 ('nn_spearman', nn_spearman),
@@ -398,14 +473,18 @@ lst_result = [
 ('nn_shap_cossine_nt', nn_shap_cossine_nt),
 ('number_of_features', number_of_features),
 ('neural_network_hidden_layers', neural_network_hidden_layers),
-('activition_function', activition_function),
-('dropout', dropout)
+('activition_function', activation_fn),
+('dropout', dropout_rt)
 ]
 
 result_list.append(lst_result)
 
+# R² results
+r2_results = [item for item in lst_result if item[0].startswith('r2_')]
+df_r2 = pd.DataFrame([dict(r2_results)])
+
 # =============================================================================
-# 9 - Final Results
+# 12 - Final Results
 # =============================================================================
 df, df_cosine_mean, df_spearman_mean, df_mae_mean, df_mse_mean = generate_average_metrics_separated(result_list)
 
@@ -418,9 +497,7 @@ df_cosine_mean.to_csv('df_cosine_mean_result.csv', index=False)
 df_spearman_mean.to_csv('df_spearman_mean_result.csv', index=False)
 df_mae_mean.to_csv('df_mae_mean_result.csv', index=False)
 df_mse_mean.to_csv('df_mse_mean_result.csv', index=False)
+df_r2.to_csv('df_r2_mean_result.csv', index=False)
 
 # =============================================================================
 # =============================================================================
-
-
-
