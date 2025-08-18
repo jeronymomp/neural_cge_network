@@ -1,0 +1,9 @@
+metric,mean
+cobb_spearman,-0.5
+nn_spearman,-1.0
+nn_spearman_ig,-1.0
+nn_shap_spearman,-1.0
+nn_shap_spearman_dl,-1.0
+nn_shap_spearman_gs,-1.0
+nn_shap_spearman_fa,-1.0
+nn_shap_spearman_nt,-1.0

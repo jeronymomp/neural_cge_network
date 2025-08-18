@@ -1,0 +1,4 @@
+metric,mean
+mae_nn,1.4886538982391357
+mae_regression,1.0214596628341202
+mae_cobb_nn,1.1982629299163818

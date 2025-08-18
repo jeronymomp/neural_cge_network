@@ -161,9 +161,9 @@ def compute_shap_impact_percent(model, X_train, X_test, y_train,
 
 #-----------
 # Function 5 - Cosine Similarity
-def compare_importance_cosine(a, b):
+def compare_importance_cosine(a, b, skip_normalization=False):
     """
-    Computes the cosine similarity between two normalized importance vectors.
+    Computes the cosine similarity between two importance vectors.
 
     This method evaluates how similar the direction and distribution of importance is
     between two models. The result ranges from 0 (completely dissimilar) to 1 (identical direction).
@@ -171,13 +171,18 @@ def compare_importance_cosine(a, b):
     Args:
         a (np.ndarray): 1D array of importance values from model A.
         b (np.ndarray): 1D array of importance values from model B.
+        skip_normalization (bool): If True, do not normalize the importance vectors.
 
     Returns:
-        float: Cosine similarity between the two normalized importance vectors.
+        float: Cosine similarity between the (optionally normalized) importance vectors.
     """
-    a_norm = normalize_importance(a).reshape(1, -1)
-    b_norm = normalize_importance(b).reshape(1, -1)
-    return cosine_similarity(a_norm, b_norm)[0][0]
+    if not skip_normalization:
+        a = normalize_importance(a)
+        b = normalize_importance(b)
+    
+    a = a.reshape(1, -1)
+    b = b.reshape(1, -1)
+    return cosine_similarity(a, b)[0][0]
 
 #-----------
 # Function 6 - Normalize Importance
@@ -200,24 +205,27 @@ def normalize_importance(array):
 
 #-----------
 # Function 7 - Importance Spearmean
-def compare_importance_spearman(a, b):
+def compare_importance_spearman(a, b, skip_normalization=False):
     """
     Compares the relative importance rankings of two coefficient arrays using Spearman correlation.
 
-    This method evaluates the monotonic relationship between the normalized importances
+    This method evaluates the monotonic relationship between the importances
     of two sets of features. A value of 1.0 indicates perfect agreement in ranking,
     -1.0 indicates reversed ranking, and 0.0 means no correlation.
 
     Args:
         a (np.ndarray): 1D array of importance values from model A.
         b (np.ndarray): 1D array of importance values from model B.
+        skip_normalization (bool): If True, do not normalize the importance vectors.
 
     Returns:
-        float: Spearman rank correlation coefficient between the normalized vectors.
+        float: Spearman rank correlation coefficient between the (optionally normalized) vectors.
     """
-    a_norm = normalize_importance(a)
-    b_norm = normalize_importance(b)
-    corr, _ = spearmanr(a_norm, b_norm)
+    if not skip_normalization:
+        a = normalize_importance(a)
+        b = normalize_importance(b)
+    
+    corr, _ = spearmanr(a, b)
     return corr
 
 #-----------

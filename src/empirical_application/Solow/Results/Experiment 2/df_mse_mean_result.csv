@@ -1,0 +1,4 @@
+metric,mean
+mse_nn,3.726175308227539
+mse_cobb_nn,2.776823043823242
+mse_regression,2.0737384098026705
