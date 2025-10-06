@@ -7,6 +7,8 @@ Functions:
     compare_importance_cosine
     normalize_importance
     compare_importance_spearman
+    topk_pairwise_rank_agreement
+    topk_rank_correlation
     
 @author: jeronymo
 """
@@ -270,6 +272,69 @@ def cobb_douglas_log_impact(layers_exponents, feature_index, normalize=False):
 
     return total_impact
 
+#-----------
+# Function 9 - topk
+def topk_pairwise_rank_agreement(Ea, Eb, k):
+    """
+    Computes the Top-K Pairwise Rank Agreement between two explanations.
+
+    This method evaluates how consistently two explanations rank their top-k features.
+    For each pair of features in the shared top-k set, it checks if the relative ordering
+    is the same in both explanations. The result ranges from 0 (no agreement) to 1 (full agreement).
+
+    Args:
+        Ea (np.ndarray): 1D array of importance values from explanation A.
+        Eb (np.ndarray): 1D array of importance values from explanation B.
+        k (int): Number of top features to consider.
+
+    Returns:
+        float: Proportion of feature pairs in the top-k that are ranked the same.
+    """
+    top_a = set(Ea.argsort()[-k:])
+    top_b = set(Eb.argsort()[-k:])
+    common = list(top_a & top_b)
+    if len(common) < 2:
+        return 0.0
+
+    total = 0
+    agreement = 0
+    for i in range(len(common)):
+        for j in range(i+1, len(common)):
+            fi, fj = common[i], common[j]
+            ra = Ea[fi] > Ea[fj]
+            rb = Eb[fi] > Eb[fj]
+            agreement += ra == rb
+            total += 1
+    return agreement / total
+
+#-----------
+# Function 9 - top_rank
+def topk_rank_correlation(Ea, Eb, k):
+    """
+    Computes the Top-K Rank Correlation (Spearman) between two explanations.
+
+    This method evaluates the correlation between the rankings of the shared top-k features
+    in two explanations. The result ranges from -1 (completely opposite rankings) to 1 (identical rankings).
+
+    Args:
+        Ea (np.ndarray): 1D array of importance values from explanation A.
+        Eb (np.ndarray): 1D array of importance values from explanation B.
+        k (int): Number of top features to consider.
+
+    Returns:
+        float: Spearman rank correlation coefficient for the shared top-k features.
+    """
+    import scipy.stats as stats
+
+    top_a = set(Ea.argsort()[-k:])
+    top_b = set(Eb.argsort()[-k:])
+    common = list(top_a & top_b)
+    if len(common) < 2:
+        return 0.0
+
+    ranks_a = [Ea[i] for i in common]
+    ranks_b = [Eb[i] for i in common]
+    return stats.spearmanr(ranks_a, ranks_b).correlation
 
 
 #-----------------------------------------------------------------------------#

@@ -1,0 +1,2 @@
+real_feature_impact,cobb_douglas_feature_impact,neural_network_feature_impact,shap_impact_percent,importances_ig,importances_dl,importances_gs,importances_fa,importances_nt
+0.15329727229651682,-0.0003156825995346295,-0.9353460669517517,35.883893252846484,0.23064463,0.23064463,0.16540623,0.23064463,0.25739294

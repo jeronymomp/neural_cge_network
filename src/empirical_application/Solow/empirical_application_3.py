@@ -62,9 +62,9 @@ gdp_growth_avg_variable_name = 'gdp_growth_avg'
 pop_growth_avg_variable_name = 'pop_growth_avg'
 inv_rate_avg_variable_name = 'inv_rate_avg'
 # Set of variables from regression
-y_experiment_1 = [gdp_growth_avg_variable_name]
-x_experiment_1 = [pop_growth_avg_variable_name,inv_rate_avg_variable_name]
-number_of_features = len(x_experiment_1)
+y_experiment_3 = [gdp_growth_avg_variable_name]
+x_experiment_3 = [pop_growth_avg_variable_name,inv_rate_avg_variable_name]
+number_of_features = len(x_experiment_3)
 
 #--------
 # Neural Network Parameters
@@ -131,16 +131,16 @@ inv_rate_avg = inv_rate_avg.rename(columns={'inv_rate': inv_rate_avg_variable_na
 
 
 # 3.5 Create Dataframe
-experiment_1_df = pd.DataFrame()
-experiment_1_df['countrycode'] = df_1971['countrycode']
-experiment_1_df = experiment_1_df.merge(gdp_df_growth[['countrycode', 'gdp_growth_avg']], on='countrycode', how='left')
-experiment_1_df = experiment_1_df.merge(pop_df_growth[['countrycode', 'pop_growth_avg']], on='countrycode', how='left')
-experiment_1_df = experiment_1_df.merge(inv_rate_avg[['countrycode', 'inv_rate_avg']], on='countrycode', how='left')
-experiment_1_df = experiment_1_df.dropna()
+experiment_3_df = pd.DataFrame()
+experiment_3_df['countrycode'] = df_1971['countrycode']
+experiment_3_df = experiment_3_df.merge(gdp_df_growth[['countrycode', 'gdp_growth_avg']], on='countrycode', how='left')
+experiment_3_df = experiment_3_df.merge(pop_df_growth[['countrycode', 'pop_growth_avg']], on='countrycode', how='left')
+experiment_3_df = experiment_3_df.merge(inv_rate_avg[['countrycode', 'inv_rate_avg']], on='countrycode', how='left')
+experiment_3_df = experiment_3_df.dropna()
 
 # 3.6 Train Test Split (with numpy)
-y = experiment_1_df[y_experiment_1]
-x = experiment_1_df[x_experiment_1]
+y = experiment_3_df[y_experiment_3]
+x = experiment_3_df[x_experiment_3]
 
 X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_sample_size, random_state=random_state)
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=valid_sample_size, random_state=random_state)

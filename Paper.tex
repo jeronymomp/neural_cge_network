@@ -1,0 +1,860 @@
+\RequirePackage{fix-cm}
+\documentclass[smallcondensed]{svjour3}       
+\smartqed  
+\pagestyle{headings}
+\usepackage[utf8]{inputenc}
+\usepackage[titletoc,toc,title]{appendix}
+\usepackage{natbib}
+\usepackage{amsfonts}
+\usepackage{multirow}
+\usepackage{appendix}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{comment}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{colortbl}
+\usepackage{siunitx}
+\usepackage{adjustbox}
+%\usepackage{authblk}
+\usepackage{csquotes}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[capposition=top]{floatrow}
+\usepackage[flushleft]{threeparttable}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{tikz}
+\usepackage[thinc]{esdiff}
+
+\begin{document}
+
+\title{The Answer is in Economics: Toward an Economic Interpretation of Neural Networks}
+
+\titlerunning{Toward an Economic Interpretation of Neural Networks}
+
+\author{%
+Jeronymo Marcondes Pinto*  \and 
+Martha Regina Meira Bianchi
+}%
+\institute{Jeronymo Marcondes Pinto \at Brazilian Ministry of Economics, Esplanada dos Ministérios, Secretariat of Labour Inspection, Brasilia, Brazil. Email: jeronymomp@gmail.com. *Corresponding author.  \and Martha Regina Meira Bianchi \at Federal University of Sao Paulo.
+}
+
+
+\maketitle
+
+\begin{abstract}
+The mechanics of deep learning models are among the most influential paradigms in contemporary science, enabling significant advances in Artificial Intelligence. However, the limited interpretability of how input features affect output variables restricts their use as analytical tools. Although recent studies have proposed methods for interpreting deep learning models, a widely accepted approach remains elusive. This paper introduces a novel paradigm by leveraging economic theory to reinterpret neural networks, making explicit the impact of features on model outputs. We model the Feedforward Artificial Neural Network as an Input-Output Model. In this analogy, each neuron is an elementary productive unit, its output corresponds to a unit-level transformation, and the aggregation of neurons generates the overall outcome. By specifying the activation function as Cobb–Douglas, we can compute the marginal contribution of each input to the output. We evaluate the method through a comprehensive set of simulation experiments and two classical empirical analyses in economics, demonstrating the applicability, interpretability, and paradigm-shifting potential of the proposed framework. To the best of our knowledge, this study is novel in that it integrates economic theory to expand the applicability and interpretability of computational methods
+\end{abstract}
+
+\keywords{Machine Learning, Economic Forecasting, Reinforcement Learning, Structural Breaks, Model Selection.}
+
+\section{Introduction}
+
+Artificial Neural Networks (ANNs) are mathematical models inspired by the human brain, designed to capture and model relationships within both structured and unstructured datasets. They process data through a series of interconnected units, called neurons, which apply linear or nonlinear activation functions and propagate their outputs to subsequent layers. The network parameters are optimized using the backpropagation algorithm, which iteratively adjusts the weights of each neuron based on prediction errors until the model converges toward outputs closely aligned with observed values. The stacking of multiple layers of neurons results in deep learning architectures, capable of modeling highly complex patterns and dependencies in data.
+
+Deep Learning has emerged as a major driver of progress in Artificial Intelligence, influencing a wide range of domains, including speech recognition (\cite{ahlawat2025automatic}, \cite{siniscalchi2013exploiting}, \cite{nassif2019speech}), image analysis (\cite{liu2024image}, \cite{li2022research}), and sentiment analysis (\cite{murfi2024bert}, \cite{ramezani2025sentiment}). Beyond these applications, it has also played a pivotal role in the development of Large Language Models (LLMs), which have become one of the most intensively researched topics in recent years (\cite{zhang2025move}, \cite{mo2024large}). 
+
+These advances have been largely enabled by the continuous evolution of deep learning architectures, which provide the foundation for many of the most significant breakthroughs in Artificial Intelligence. In particular, recent developments in Natural Language Processing, driven by the introduction of the Transformer architecture \citep{vaswani2017attention}, and in Computer Vision, pioneered through the success of convolutional neural networks \citep{lecun2002gradient}, have set new performance benchmarks across multiple tasks. Deep Learning has demonstrated an extraordinary capacity to model complex phenomena not only from structured data but, more importantly, from unstructured data. This capability has enabled the advancement of data science at a scale previously unseen. This stimulated new lines of research exploring the use of deep learning to tackle complex problems across a wide range of disciplines. Notable examples include applications in economics \citep{fan2023deep}, medicine \citep{yang2021detection}, and finance \citep{podder2025can}, where deep learning methods have shown significant promise in advancing both theoretical insights and practical solutions.
+
+However, one of the main challenges associated with Deep Learning models is their \textbf{black-box} nature \citep{csahin2025unlocking}. This characteristic limits their applicability, as achieving interpretability and explainability in deployed models remains difficult. The issue primarily arises from their underlying architecture, which is composed of highly nonlinear functions, making it challenging to determine how individual features influence the target variable. This is particularly important in sectors that employ this technique beyond computer science, such as economics and medicine. For instance, when analyzing an economic phenomenon, it is crucial for policymakers to understand how explanatory variables influence the outcome under study and how they interact with one another—something that is difficult to assess using traditional deep learning models. 
+
+Many studies focus on the black-box nature of neural networks by introducing new methods or architectures to tackle this issue. While some approaches are model-based, the majority remain model-agnostic, analyzing the effects of perturbing inputs or network components on outputs without explicitly modeling the underlying mechanisms. High-level techniques such as SHAP values, LIME, and Integrated Gradients exemplify this paradigm \citep{molnar2020interpretable}.
+
+Developing a comprehensive theoretical framework for understanding neural network behavior is crucial, as interpretability is often a prerequisite for reliable model deployment, since it is only through such understanding that these models can be reliably adopted across diverse domains and applications, where interpretability is a prerequisite for their repeated and responsible use. Thus, efforts to develop a more general theory of neural networks are essential for the advancement of Artificial Intelligence, an endeavor that appears feasible only through a multidisciplinary approach, as illustrated by \cite{martin2021implicit}.\textit{However, despite the large body of research addressing this issue, we are still far from a definitive theory of neural network interpretability}.
+
+One of the most important tools used in economic science to analyze production chains and the interactions among firms is the input–output model. \cite{leontief1986input} develops a method to represent how production flows from one sector to another until the total output of the economy is generated. This approach makes it possible to model how each sector contributes to aggregate output by capturing the interactions among sectors and their relative participation in the overall outcome. It is a seminal work based on input–output tables, which allow for the analysis of interdependencies between economic sectors and the relationship between a sector’s output and national output. 
+
+Building on this intuition, we could reinterpret the neural network as a production network, where each neuron acts as a firm and its output is analogous to the neuron’s activation. By specifying a Cobb–Douglas production function as the activation, we can evaluate the marginal contribution of each input to the total output. This approach retains the spirit of Leontief’s method—tracing how production propagates through the economy—while allowing for nonlinear interactions, flexible elasticities, and explicit interpretability of input contributions in a deep network framework.
+
+This analogy enhances the interpretability of neural networks by enabling the quantification of each neuron's contribution to the overall output and by providing insights into how individual features influence the target variable. This is achieved through the propagation of technical substitution elasticities, which are guaranteed by the well-defined properties of the Cobb–Douglas production function. 
+
+To the best of our knowledge, \textbf{this study is novel in several aspects}:
+
+\begin{enumerate}
+    \item It integrates principles from economic science to expand the applicability and interpretability of computational methods, diverging from conventional approaches;
+    \item It enhances the interpretability of neural networks by grounding them in a well-established economic model;
+    \item It introduces a new economics-inspired activation function with desirable mathematical properties;
+    \item It compares our results against a wide range of existing interpretability methods for neural networks.
+    \item It provides the neural network with a general interpretable model, opening the door to a new stream of research.
+\end{enumerate}
+
+
+The paper is organized as follows: Section 1 introduces the foundational concepts required to understand our methodology. Section 2 details the concepts needed to understand the framework of the proposed approach. Section 3 develops our proposed theory. Section 4 presents a set of simulated experiments designed to evaluate its performance in a controlled environment. Section 5 illustrates the application of our method to a classical economic model, namely the Solow Growth Model, followed by concluding remarks.
+
+\section{Concepts}
+
+This section defines the concepts necessary for a proper understanding of the analogy proposed in this work. In particular, it is important to grasp notions related to neural networks, the input-output matrix, and the Cobb–Douglas production function. Furthermore, the role of technology as a central element in the production function is highlighted, since it directly influences the efficiency with which productive factors are combined. For a more detailed treatment and deeper understanding of each topic, specialized literature is cited.
+
+\subsection{Feedforward Neural Networks}
+
+\cite{bengio2017deep} describes a neural network as a procedure for approximating an unknown target function $f^{*}$. In a supervised setting, a neural network defines a mapping $y = f(x, \theta)$, where the learning task is to estimate the parameter set $\theta$ that most accurately explains the relationship between $x$ and $y$, following the general paradigm of machine learning models. These models are referred to as feedforward because the information flows in one direction, from the input features to the target variable.
+
+Artificial neural networks are distinguished from other machine learning models by their design, which is inspired by the functioning of biological neurons. Feedforward neural networks can be formally understood as directed acyclic graphs (DAGs), where information flows in a single direction—from the input features through intermediate layers to the target variable. In mathematical terms, they are a composition of functions, with each layer applying a linear transformation followed by an activation function, enabling the network to approximate complex mappings between inputs and outputs. The equation \ref{neuron} formalizes the mathematical representation of a neuron in neural networks.
+
+\begin{equation} \label{neuron}
+    x \rightarrow v(x) = \sigma(w^{T} x + b) = \sigma \circ \mathbf{T(x)}.
+\end{equation}
+
+Here, $\sigma$ represents the activation function, which transforms the weighted sum of the inputs ($w^{T}x$) and the bias term ($b$) into linear or nonlinear outputs, depending on the choice of $\sigma$. The definition of affine function is $\mathbf{T(x)}$, which is submitted to the activation function.
+
+A neural network consists of a stacking of multiple layers, each containing one or more neurons. More formally, stacking layers of neurons yields:
+
+\begin{equation}
+    x \mapsto \Phi(x) = T_{L+1} \circ \sigma \circ \cdots \circ T_1 \circ \sigma \circ T_0(x)
+\end{equation}
+
+The number of compositions, $L$, corresponds to the number of layers in the NN. A \textbf{deep neural network} is basically a neural network with more than one layer of neurons, where the parameters are given by the entries of the matrices and vectors that define the affine transformations $T_j, \quad j = 0, \dots, L+1$. The architecture of a neural network enhances its capacity to generalize to more complex outcomes and, in many cases, expands the possibilities for modeling diverse functional relationships. This is achieved through the dense interconnection of information-processing units, as illustrated in the figure \ref{fig:basic_nn_fig}.
+
+\begin{figure}
+\begin{tikzpicture}[x=2.5cm, y=1.5cm, >=stealth]
+
+% ======================
+% NODES
+% ======================
+
+\node[circle, draw] (I1) at (0,2) {$x_1$};
+\node[circle, draw] (I2) at (0,1) {$x_2$};
+\node[circle, draw] (I3) at (0,0) {$x_3$};
+
+\node[circle, draw] (H1) at (1,1.5) {$h_1$};
+\node[circle, draw] (H2) at (1,0.5) {$h_2$};
+
+\node[circle, draw] (O1) at (2,1) {$y$};
+
+% ======================
+% CONNECTIONS
+% ======================
+
+% Input -> Hidden
+\draw[->] (I1) -- (H1);
+\draw[->] (I1) -- (H2);
+\draw[->] (I2) -- (H1);
+\draw[->] (I2) -- (H2);
+\draw[->] (I3) -- (H1);
+\draw[->] (I3) -- (H2);
+
+% Hidden -> Output
+\draw[->] (H1) -- (O1);
+\draw[->] (H2) -- (O1);
+\end{tikzpicture}
+ \caption{Basic Neural Network Arquitecture.}
+    \label{fig:basic_nn_fig}
+\end{figure}
+
+The objective is to minimize the empirical risk of the target function over the training samples, indexed from $1$ to $n$, that is:
+
+\begin{equation}
+    \hat{\theta} = \arg\min_{\theta} R(\Phi_{\theta}) 
+    = \arg\min_{\theta} \frac{1}{n} \sum_{i=1}^{n} Loss\big(\Phi_{\theta}(x_i), y_i\big),
+\end{equation}
+
+The minimization of the loss function in neural networks is carried out using the backpropagation algorithm, which computes the gradients of the objective function by propagating the errors from the output back through the previous layers. These gradients are then used by optimization algorithms, such as gradient descent, to adjust the network’s parameters, provided that both the objective function and the activation functions are differentiable. This method updates the network parameters as follows: 
+
+The gradient descent update rule is given by
+\begin{equation}
+\theta^{(t+1)} = \theta^{(t)} - \eta \, \nabla R(\theta^{(t)}),
+\end{equation}
+where $\theta^{(t)}$ denotes the parameter vector at iteration $t$ and $\eta > 0$ is the learning rate.  
+At a local minimizer $\theta^{(t^*)}$, the gradient vanishes:
+\begin{equation}
+\nabla R(\theta^{(t^*)}) = 0.
+\end{equation}
+Consequently, the update becomes stationary,
+\begin{equation}
+\theta^{(t+1)} = \theta^{(t)}, \quad t \ge t^*,
+\end{equation}
+indicating that the algorithm is trapped at the local minimum.
+
+\subsection{Interpretability of a Neural Network}
+
+The discussion regarding the interpretability of neural networks is central throughout the artificial intelligence literature. \cite{molnar2020interpretable} highlights the main reasons why a machine learning model should be interpretable, namely:
+\begin{itemize}
+\renewcommand\labelitemi{$\bullet$}
+    \item model validation;
+    \item model debugging;
+    \item knowledge discovery;
+    \item among others.
+\end{itemize}
+
+The two well-known approaches for interpreting machine learning models—more specifically, deep learning models in our context—are:
+\begin{enumerate}
+    \item Model-agnostic approach;
+    \item Model-based approach.
+\end{enumerate}
+
+The model-based approach relies on developing a theory of how the "black box" of a model operates in general terms. Indeed, these works seek to propose new paradigms and formulate theoretical frameworks for understanding neural network behavior and the influence of individual features on the target variable.
+
+The model-based approach has proven promising and has seen significant advances in the field of deep learning in recent years.\cite{yang2021detection} introduces the Explainable Neural Network (xNN), a structured neural network that preserves the predictive power of machine learning while enhancing interpretability by genrating a disentangled feedforward network with multiple additive subnetworks. \cite{hooker2019benchmark} propose an empirical metric to assess the approximate accuracy of feature importance estimates in deep neural networks. \cite{wu2025explainable} develops a novel algorithm to enhance the interpretability of Transformer architectures when used to forecast time series, grounded in the principles of Granger causality. \cite{martin2021implicit} propose a novel framework for interpreting neural networks grounded in Random Matrix Theory, providing new insights into their internal structure and behavior. In addition, a new line of research, known as \textit{Topological Deep Learning}, focuses on extracting theoretical insights and patterns from neural network architectures, interpreted using tools derived from algebraic topology, as exemplified by \cite{spannaus2024topological}.
+
+Nonetheless, the majority of studies continue to adopt an agnostic approach, which involves perturbing network elements or features and examining the resulting impact, without providing an explicit model to explain the underlying mechanisms. 
+ 
+The agnostic approach treats deep learning models as black boxes, employing methods that provide local interpretability for the model’s parameters. In other words, it relies on post-hoc explanations—based on the observed effects of changes in the model’s parameters—without addressing the underlying mechanisms. These methods encompass a wide range of approaches, including SHAP values, LIME, and Integrated Gradients \citep{molnar2020interpretable}.
+
+For illustrative purposes, we will explain one of the most well-known Local Model-Agnostic Methods: \textbf{Shapley Values}. Based on game theory, the basic idea originates from a cooperative game in which the contribution of each player to the final outcome must be evaluated. Intuitively, the Shapley value of a feature quantifies how much that feature contributes to the model's prediction relative to the average prediction:
+
+\begin{equation}
+    \phi_{j} \approx f(x) - \mathbb{E}[f(x)],
+\end{equation}
+
+where \(f(x)\) denotes the effect of a feature's variation, and \(\mathbb{E}[f(x)]\) represents the expected effect over all feature combinations. This provides a local, post-hoc estimate of feature importance. According to \cite{molnar2020interpretable}, the Shapley value of a feature is defined as:
+
+\begin{equation}
+\phi_j(\text{val}) = \sum_{S \subseteq \{1, \dots, p\} \setminus \{j\}}
+\frac{|S|! \, (p - |S| - 1)!}{p!} 
+\Big( \text{val}(S \cup \{j\}) - \text{val}(S) \Big),
+\end{equation}
+
+where $S$ is a subset of the features used, $x$ is the vector of features, and $p$ is the number of features. $val_x(S)$ is the prediction for feature values in set $S$ that are marginalized over features $X_C$, which are all the features not included in \( S \cap C = \emptyset \) and \( S \cup C = \{1, \ldots, p\} \):
+
+\begin{equation}
+    val_x(S) = \int f(x_1, \ldots, x_p)  d\mathbb{P}_{X_C} - \mathbb{E}[f(X)].
+\end{equation}
+
+It is worth highlighting the desirable properties of Shapley values, such as:
+
+\begin{enumerate}
+    \item \textit{Efficiency} – the sum of the feature contributions equals the prediction difference:
+    \begin{equation}
+        \sum_{j=1}^{p}\phi_{j} = f(x) - \mathbb{E}[f(x)].
+    \end{equation}
+
+    \item \textit{Symmetry} – the Shapley Value for two different features, $j$ and $i$, should be equal if their contribution is the same:
+
+    \begin{equation}
+        \text{val}(S \cup \{j\}) = \text{val}(S \cup \{i\}) \forall S \subseteq \{1, \dots, p\}\Rightarrow \phi_{j} = \phi_{i}.
+    \end{equation}
+
+    \item \textit{Dummy} – if a feature does not affect the prediction regardless of the coalition it belongs to, its Shapley value is zero:
+
+        \begin{equation}
+        \text{val}(S \cup \{j\}) = \text{val}(S) \forall S \subseteq \{1, \dots, p\}\Rightarrow \phi_{j} = 0.
+    \end{equation}
+
+    \item \textit{Additivity} – for two models \(f\) and \(g\), the Shapley values of their sum equal the sum of their individual Shapley values.
+\end{enumerate}
+
+This method is the most widely used to interpret the effect of individual features in deep learning models. In addition to Shapley values, several other agnostic methods have been developed to enhance the interpretability of neural networks, such as:
+
+\begin{enumerate}
+    \item \textbf{Integrated Gradients}: a method based on integrating the gradients of the model’s output with respect to its inputs for a given baseline \citep{sundararajan2017axiomatic};
+    \item \textbf{Noise Tunnel}: introduces a perturbation into an attribution method, in this case Integrated Gradients, and evaluates the final impact \citep{smilkov2017smoothgrad};
+    \item \textbf{DeepLIFT}: this method decomposes the target prediction by backpropagating the contribution of all neurons with respect to each feature, allowing a comparison of activations before and after the process \citep{shrikumar2017learning};
+    \item \textbf{Gradient SHAP}: this method samples multiple input baselines, adds Gaussian noise to the inputs, and applies Integrated Gradients to each perturbed sample. The attributions are then averaged to approximate SHAP values \citep{kokhlikyan2020captum};
+    \item \textbf{Feature Ablation}: this method is based on defining baseline values for features (e.g., setting them to zero) and then measuring the variation in model output when other features are altered \citep{molnar2020interpretable}.
+\end{enumerate}
+
+Nevertheless, these methods offer no improvement in terms of the global interpretability of models, as they rely solely on post-hoc analyses of the estimated models. Despite advances in general deep learning theory, agnostic methods remain predominant due to the inherent complexity of all artificial neural network frameworks (such those based on quantum mechanics, for example). A simplified theoretical framework that enables a comprehensive understanding of how deep learning models function and how features influence the targets is still needed.
+
+\subsection{Input-Output Model}
+
+The Input-Output Model (IOM) is the framework developed by Wassily Leontief in the late 1930s \citep{leontief1936}. Many of the concepts introduced in this work have played a pivotal role in economic science, especially in interindustry analysis, facilitating a precise evaluation of the interactions and interdependencies among firms. The IOM is formulated as a system of simultaneous linear equations that guarantees each sector’s total output is allocated either to other sectors as intermediate consumption or to final demand, thus forming part of the economy’s overall production.
+
+More formally, based on \cite{miller2009input}, let us consider a country with $n$ economic sectors. These sectors can be interconnected to varying degrees; for example, the automotive parts sector may allocate part of its production to the vehicle manufacturing sector as intermediate input, while the remainder serves final demand by end consumers. Assume that $x_{i}$ is the total production of the sector $i$ and $f_{i}$ the final demand for its products:
+
+\begin{equation} \label{iom}
+x_i = z_{i1} + \cdots + z_{ij} + \cdots + z_{in} + f_i = \sum_{j=1}^{n} z_{ij} + f_i
+\end{equation} 
+
+This equation formalizes the market-clearing condition for sector $i$, with $z_{i}$ representing intermediate sales, that is, the fraction of the sector’s total output allocated to other industries as intermediate consumption.
+
+By generalizing this functional form across all $n$ sectors of the economy, we arrive at a system of simultaneous equations that collectively determine the aggregate output of the economy, as follows:
+
+\begin{equation} \label{iom matrix}
+    \mathbf{x}  = \mathbf{Zi} + \mathbf{f},
+\end{equation}
+
+where:
+
+\begin{equation}
+\mathbf{x} =
+\begin{bmatrix}
+x_1 \\ \vdots \\ x_n
+\end{bmatrix}, \quad
+\mathbf{Z} =
+\begin{bmatrix}
+z_{11} & \cdots & z_{1n} \\
+\vdots & \ddots & \vdots \\
+z_{n1} & \cdots & z_{nm}
+\end{bmatrix}, \quad
+\mathbf{f} =
+\begin{bmatrix}
+f_1 \\ \vdots \\ f_n.
+\end{bmatrix}
+\end{equation}
+
+The matrix $Z$ represents the flow of goods from each sector to the intermediate production of other sectors, allowing us to quantify the extent to which each production unit depends on inputs from previous stages in the production chain. 
+
+This knowledge allow us to calculate the extent of the dependency between sectors. The \textbf{technical coefficient} $a_{ij}$ measures the amount of input from sector $i$ required to produce one unit of output in sector $j$. The matrix of technical coefficients is defined as $A = [a_{ij}]$, where
+
+\begin{equation}
+a_{ij} = \frac{z_{ij}}{x_j}.
+\end{equation}
+
+In matrix form, we can represent whole set of technical coefficients as $A$:
+
+\begin{equation} \label{tech_coef}
+    \mathbf{A} = \mathbf{Z}\mathbf{x^{-1}}.
+\end{equation}
+
+Substituting the equation \ref{tech_coef} into equation \ref{iom matrix}, yelds:
+
+\begin{equation}
+    \mathbf{x} = \mathbf{(I - Ax)^{-1}f} = \mathbf{Lf}.
+\end{equation}
+
+Were $L$ is the \textbf{Leontief inverse matrix}, capturing both direct and indirect effects of sectoral production throughout the economy. This formulation highlights the sensitivity of each sector's gross output to variations in the final demand components. In a differential calculus approach, it is evident that
+
+\begin{equation}
+\frac{\partial x_i}{\partial f_j} = l_{ij}.
+\end{equation}
+
+A key limitation of the Input–Output Model is that its technical coefficients assume the final output is produced from a fixed proportion of inputs, implying a constant relationship between each input’s contribution and total output. In reality, economic production processes are often governed by more complex functional forms that describe the mapping from input combinations to total output. Consequently, productive units can be modeled using modern neoclassical production functions, rather than the fixed input shares inherent in the classical IOM framework, such as discussed in \cite{burres1994homeomorphism}. In this case, each productive unit would receive its inputs, whether primary or derived from intermediate units, process them according to a production function, and generate its output accordingly.
+
+\subsection{Production Function - Cobb Douglas}
+
+In a market economic model, the firm produces according to its production function, that is, a mapping between inputs and the final output, as described in the following equation:
+
+\begin{equation}
+Y = f(X_1, X_2, \ldots, X_n)
+\end{equation}
+
+The basic feasible technology of an Input-Output Model (IOM) is the Leontief technology, in which production is given by:
+
+\begin{equation}
+Y = \min \left\{ \frac{X_1}{a_1}, \frac{X_2}{a_2}, \ldots, \frac{X_n}{a_n} \right\},
+\end{equation}
+
+where \(X_j\) denotes the amount of input \(j\), and \(a_{ij}\) is the technical coefficient that represents the units of input \(j\) required to produce one unit of output \(i\).
+
+However, this production function is quite restrictive for explaining the complex workings of a market economy, as it relies on constant technical coefficients. A more general and widely accepted representation of firm technology is the \textbf{Cobb–Douglas production function}, described in equation \ref{cobb_douglas_1}.
+
+\begin{equation} \label{cobb_douglas_1}
+Y = A \prod_{i=1}^n x_i^{\alpha_i}, \qquad \sum_{i=1}^n \alpha_i = 1
+\end{equation}
+
+The Cobb-Douglas technology is well-known for representing so-called “well-behaved” technologies. In production theory, technology refers to the feasible set of input combinations capable of generating a given level of output, while the production function is the analytical representation of this technology. The Cobb-Douglas technology has some desirable properties that justify its broader use, such as:
+
+\begin{itemize}
+
+\item[] \textbf{Monotonicity}: If $x^{0}$ is the set of inputs necessary to produce $y$ units of output and $x^{1}>x^{0}$ $\Rightarrow$ it is possible to produce $y$ units of output with $x^{1}$;
+
+\item[] \textbf{Convexity}: If $x^{0}$ and $x^{1}$ are feasible in a way to produce \textbf{at least} $y$ $\Rightarrow$ $tx^{0}+(1-t)x^{1}$ are feasible as well, $\forall$ $0 \leq t \leq 1$;
+
+\item[] \textbf{Homogeneity of degree $\sum_{i=1}^n \alpha_i$}: If all inputs are scaled by a factor $t>0$, the resulting output will be $t^{\sum_{i=1}^n \alpha_i}$. If this sum equals 1, the technology exhibits constant returns to scale. If the sum is greater than 1, it exhibits increasing returns to scale, while if the sum is less than 1, it exhibits decreasing returns to scale.
+\end{itemize}
+
+
+The homogeneity associated with the coefficients of the Cobb-Douglas function carries an important interpretation in economic systems, as it enables the measurement of the relative contribution of each input to total output, which corresponds to its marginal product. Assume the following Cobb-Douglas production function:
+
+\begin{equation} \label{cobb-douglas-2-inputs}
+    Y = A K^{\alpha} L^{1-\alpha},
+\end{equation}
+
+where $A$ is the efficiency parameter, representing the state of technology; 
+$K$ is the amount of capital used as an input; 
+$L$ is the amount of labor employed in the production process; 
+$\alpha \in (0,1)$ denotes the output elasticity of capital, measuring the relative contribution of capital to production, 
+while $(1-\alpha)$ represents the output elasticity of labor. 
+Finally, $Y$ is the resulting output.
+
+The coefficients of the Cobb-Douglas function allow us to determine the percentage impact on total output resulting from a 1\% variation in one of the inputs, which is called as \textit{elasticity} by economists. Analytically, for the case of labor (the same reasoning applies to any input in the Cobb-Douglas function):
+
+\begin{equation}
+    \frac{L}{Y}\frac{\partial Y}{\partial L} = \frac{L}{Y}(1-\alpha)A K^{\alpha} L^{-\alpha}=1-\alpha.
+\end{equation}
+
+This property is highly desirable. When modeling the nonlinear behavior of an economy as a series of interconnected elements, the Cobb-Douglas production function allows us to evaluate the impact of variations in the initial quantities of inputs on total output. In other words, a complex interconnected system can benefit from being reinterpreted as an economic system governed by well-behaved production functions, which make it possible to assess the impact of percentage changes in input values.
+
+\section{Theory}
+
+The black-box nature of artificial neural networks raises the question of whether a reinterpretation of the model could help overcome this limitation. Some studies address this challenge by drawing on domain-specific knowledge outside the fields of computer science and mathematics - such as biological approaches \citep{hanczar2020biological} - to provide alternative explanations of neural network functioning.
+
+Despite valuable contributions from disciplines including algebraic topology, quantum mechanics, and graph theory, \textbf{the central issue of explainability in deep learning—namely, how input features propagate through the network and exert causal influence on outputs—remains largely unresolved}. 
+
+Historically, economics was dependent on tools from mathematics, statistics and computer science to analyze complex phenomena. \textbf{Far less common, however, is the reverse process: leveraging economic concepts to shed light on challenges faced in other scientific domains}. In particular, the emerging use of deep learning for estimating the parameters of input–output models (IOMs) illustrates the untapped potential of economic theory not merely as a consumer of computational methods, but also as a source of interpretative insights for the broader machine learning community.
+
+Our work proposes a novel approach in the domain of deep learning that builds upon the context described above. \textbf{The core idea is that by reinterpreting a neural network as an input–output model (IOM) with Cobb-Douglas production functions \citep{acemoglu2012network, oberfield2018theory}, it becomes possible to determine the impact of a change in an input feature (independent variable) on its corresponding target (dependent variable)}. 
+
+This represents one of the greatest challenges in the field of artificial intelligence today, and it is a topic of interest across multiple disciplines that employ neural networks. Achieving such a capability would represent a paradigm shift, fostering a new perspective on the underlying mechanics of deep learning.
+
+This reinterpretation approach follows the theoretical steps outlined below:
+
+\begin{enumerate}
+
+    \item Establish a conceptual correspondence between input–output models (IOMs) and neural networks, highlighting the analogy between the propagation of inputs through an IOM and the forward pass in a network.
+    \item Provide a formal proof that the Cobb–Douglas activation function satisfies the fundamental requirements for an activation function, including non-linearity, differentiability, stable gradient propagation, and the universal approximation property.
+\end{enumerate}
+
+\subsection{Conceptual Correspondence between Neural Networks and the IOM}
+
+In this section, we establish a conceptual correspondence between Artificial Neural Networks (ANNs) and the Input–Output Model (IOM). \textit{This correspondence is developed through graph theory}. 
+
+Suppose that the share of firms in the productive system of an economy is described according to equation \ref{iom matrix}. Traditional IOM ensures the existence of a feedback flow of inputs and outputs circulating among all firms in the economy.
+
+An alternative way to represent the IOM framework is based on Graph Theory, as illustrated by \cite{xu2019input} and \cite{sargent2024economic}. From this perspective, the productive structure can be interpreted as a graph, where nodes represent economic agents and edges capture the flows of inputs and outputs among them.
+
+A Graph is a pair $G=V(V,E)$ of sets where $V$ are vertices (or nodes) and $E$ are edges (or lines). We can represent a graph as a set of edges connecting its vertices, either in a unidirectional manner or allowing for feedback loops, such as traditional IOM. A visualization of a simple example of the IOM model is presented in Figure~\ref{fig:iom_feedback}.
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[x=2.5cm, y=2cm, >=stealth]
+
+% ======================
+% NODES
+% ======================
+\node[circle, draw] (S1) at (0,1) {Sector 1};
+\node[circle, draw] (S2) at (1,2) {Sector 2};
+\node[circle, draw] (S3) at (2,1) {Sector 3};
+
+% ======================
+% CONNECTIONS
+% ======================
+
+% Flow forward
+\draw[->] (S1) -- (S2);
+\draw[->] (S2) -- (S3);
+\draw[->] (S3) -- (S1);
+
+% Feedback (extra links)
+\draw[->, bend left=20] (S1) to (S3);
+\draw[->, bend left=20] (S3) to (S2);
+\draw[->, bend left=20] (S2) to (S1);
+
+\end{tikzpicture}
+\caption{Simple input-output network with feedback loops across sectors.}
+\label{fig:iom_feedback}
+\end{figure}
+
+In this example, the edges represent the flows of products between sectors, which can be formally described by the elements $z_{ij}$ of the input--output matrix $Z$, where $z_{ij}$ denotes the amount of output from sector $i$ required as an input by sector $j$. The nodes correspond to the productive units of the IOM, each representing a sector in the economic system.
+
+Graphs can also be weighted, meaning that each edge carries an associated numerical value, referred to as its weight. Formally, a weighted graph can be defined as the triple
+\begin{equation}
+    H = (V, E, w),
+\end{equation}
+where $V$ denotes the set of vertices, $E \subseteq V \times V$ denotes the set of edges, and $w: E \to (0,\infty)$ is a weight function that assigns a strictly positive value to each edge.
+
+A particularly important class of graphs in both economics and machine learning is the \textit{Directed Acyclic Graph} (DAG). Formally, a DAG is a directed graph such that there exists no sequence of distinct vertices $v_1, v_2, \ldots, v_k \in V$ with $k \geq 2$ satisfying $(v_i, v_{i+1}) \in E$ for all $i = 1, \ldots, k-1$ and $(v_k, v_1) \in E$. In other words, a DAG is a directed graph with no cycles, meaning that it is impossible to start from a given vertex and return to it by following the orientation of the edges, as can be seen on figure \ref{fig:simple_dag}. This property makes DAGs especially suitable for representing hierarchical or causal structures, where the direction of the edges encodes a flow of information, resources, or influence without the possibility of feedback loops. 
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=2.5cm, y=1.5cm, >=stealth]
+
+% ======================
+% NODES
+% ======================
+
+\node[circle, draw] (S1) at (0,2) {Sector 1};
+\node[circle, draw] (S2) at (0,1) {Sector 2};
+\node[circle, draw] (S3) at (0,0) {Sector 3};
+
+\node[circle, draw] (H1) at (1,1.5) {Sector 4};
+\node[circle, draw] (H2) at (1,0.5) {Sector 5};
+
+\node[circle, draw] (O1) at (2,1) {Sector 6};
+
+% ======================
+% CONNECTIONS
+% ======================
+
+% Input -> Hidden
+\draw[->] (S1) -- (H1);
+\draw[->] (S1) -- (H2);
+\draw[->] (S2) -- (H1);
+\draw[->] (S2) -- (H2);
+\draw[->] (S3) -- (H1);
+\draw[->] (S3) -- (H2);
+
+% Hidden -> Output
+\draw[->] (H1) -- (O1);
+\draw[->] (H2) -- (O1);
+
+\end{tikzpicture}
+\caption{Simple Directed Acyclic Graph (DAG) representing sectors.}
+\label{fig:simple_dag}
+\end{figure}
+
+\cite{sargent2024economic} emphasizes the way in which the IOM framework could be interpreted through the lens of network theory. This perspective is illustrated by the following analogy:
+
+\begin{enumerate}
+    \item \textbf{Vertices}: the productive units of the system, more specifically the firms represented in the IOM framework.
+    \item \textbf{Edges}: the production flows between firms, capturing the exchange of intermediate goods required for the production of final output.
+    \item \textbf{Weights}: each edge is associated with a weight $a_{ij}$, corresponding to the input--output coefficient that measures the quantity of output from sector $i$ required as input by sector $j$.
+\end{enumerate}
+
+In this context, the adjacency matrix is defined as a weighted matrix, where each element represents the weight of the corresponding edge in the graph. In the case of the IOM, these weights capture the magnitude of inter-sectoral flows, providing a direct correspondence with the matrix $Z$ defined in equation~\ref{tech_coef}.
+
+With regard to feedforward artificial neural networks, a similar analogy can be drawn using graphs, specifically DAGs, which naturally represent  architectures where information flows in a single direction without forming cycles. This analogy was developed on section 2.1. In a nutshell:
+
+\begin{enumerate}
+    \item \textbf{Vertices}: the neurons of the Feedforward Neural Network.
+    \item \textbf{Edges}: the value $v(x)$ described in equation \ref{neuron}.
+    \item \textbf{Weights}: the weight $w$ described in equation \ref{neuron}.
+    \end{enumerate}
+
+In the case of an IOM without feedback, that is, where the production flows behave as a directed acyclic graph (DAG), as illustrated in Figure~\ref{fig:simple_dag}, the analogy between feedforward neural networks and the IOM framework becomes evident. Comparing Figures~\ref{fig:basic_nn_fig} and \ref{fig:simple_dag} highlights that, when the IOM exhibits a direct and acyclic structure, its dynamics closely resemble those of an artificial neural network.
+
+\subsection{Our Proposed Neural IOM system}
+
+\cite{sargent2024economic} argues that the Leontief production technology traditionally employed in input–output models (IOMs) is overly restrictive, which allows alternative approaches.
+
+A common strategy is to replace the Leontief specification with a Cobb–Douglas production function. Unlike the Leontief framework, the Cobb–Douglas technology does not impose the restrictive assumption of fixed input proportions, while still preserving several of the desirable properties highlighted in the previous section.
+
+Based on our analogy with artificial neural networks, the Cobb–Douglas function serves as the activation function in this approach. This reinterpretation provides a highly desirable property, namely the ability to evaluate the final percentage impact of a 1\% change in any input of the graph, which is called as \textbf{Elasticity} by economists. This property directly challenges the paradigm associated with the "black-box" nature of artificial neural networks, as it enables explainability for the input features. We will call our proposed framework as \textbf{Neural IOM}.
+
+\subsubsection{Cumulative Effect of an Input Change in the System Output}
+
+Assume an alternative version of our Cobb–Douglas function as defined in Equation \ref{cobb_douglas_1}:
+
+\begin{equation} \label{log_cobb_douglas_1}
+y = e^{\sum_{i=1}^n \alpha_i \ln x_i},
+\end{equation}
+
+where the coefficients $\alpha_i$ correspond to elasticities with respect to each input. This function is equivalent to Equation \ref{cobb_douglas_1}, as it corresponds to the exponential transformation of the log-linear form of the Cobb–Douglas function. However, this transformation is necessary to meet the requirements of a valid activation function, as will be demonstrated in the following section.
+
+Through the training of the neural network, the values of $\alpha_i$ are estimated. For a neural network with $k$ layers, assume $n=1$ for all $k$ and bias as zero for simplicity. We can state that:
+
+\begin{equation} \label{log-correspondence}
+    y_{1,k} = x_{1,k}^{\alpha_{1,k}}, x_{1,k} = y_{1,k-1}.
+\end{equation}
+
+Recursively applying Equation~\ref{log-correspondence} in Equation~\ref{log_cobb_douglas_1} for $k$ layers, the cumulated impact on the final output is given by:
+
+\begin{equation} \label{cobb_douglas_composition}
+    y_{1,k} 
+    = \left( \cdots \left( \left( x_{1,1}^{\alpha_{1,1}} \right)^{\alpha_{1,2}} \right)^{\cdots \alpha_{1,k-1}} \right)^{\alpha_{1,k}}
+    = x_{1,1}^{\prod_{j=1}^{k} \alpha_{1,j}}.
+\end{equation}
+
+
+This shows that, in log-space, the effect of the input propagates multiplicatively through the network layers:
+
+
+\begin{equation} \label{elasticity}
+\mathbf{e}_j 
+\;\longmapsto\; A^{(1)} \mathbf{e}_j 
+\;\longmapsto\; A^{(2)} A^{(1)} \mathbf{e}_j 
+\;\longmapsto\; \cdots 
+\;\longmapsto\; A^{(L)} \cdots A^{(1)} \mathbf{e}_j.
+\end{equation}
+
+This recursive approach enables the computation of the percentage impact of a change in an input feature on the network's output. This methodology offers several advantages, including:
+\begin{enumerate}
+    \item \textbf{Computational efficiency} – since it relies on simple matrix multiplications.
+    \item \textbf{Enhanced interpretability} – facilitated through the analogy with IOMs.
+    \item \textbf{New analytical perspectives} – leveraging this analogy may reveal additional avenues for analysis.
+\end{enumerate}
+
+Certain properties are required for any activation function, such as compliance with the conditions of the Universal Approximation Theorem and the avoidance of vanishing gradients. In the following subsections, we will address these points in detail.
+
+\subsection{Cobb-Douglas as an Activation Function}
+
+With the reinterpretation of neural networks as Input–Output Models (IOMs), it is essential to verify whether the Cobb–Douglas specification remains consistent with the desirable properties of deep learning models. Given that both frameworks share a similar layer-wise structure for propagating inputs to outputs, the key question is whether a Cobb–Douglas function can serve as a valid activation. In particular, a valid activation function must satisfy several fundamental requirements \citep{bengio2017deep}: (i) non-linearity, to ensure that multiple layers contribute to expressive power; (ii) differentiability almost everywhere, which allows for effective gradient-based optimization; and (iii) a well-defined domain for the inputs, typically requiring strictly positive values to avoid undefined operations. Furthermore, for the Cobb–Douglas activation to be practically and theoretically sound in deep architectures, it must also satisfy (iv) compliance with the Universal Approximation Theorem \citep{cybenko1989approximation, hooker2019benchmark}, ensuring sufficient expressive capacity, and (v) avoidance of vanishing gradients, which guarantees stable learning across multiple layers.
+
+We first establish the basic mathematical properties of the Cobb–Douglas activation in Proposition~\ref{proposition_1} and Lemmas \ref{lemma_continuity} and \ref{lemma_nonconstant}. Next, a sequence of Lemmas shows that this function satisfies the Universal Approximation Theorem. Combining these results with the Theorem that shows that our activation does not generate vanishing gradients, we obtain the following corollary, which formally establishes the Cobb–Douglas function as a valid activation function in neural networks.
+
+\subsubsection{Mathematical Properties}
+
+% Propostion
+\begin{proposition}\label{proposition_1}
+Consider the Cobb--Douglas function defined in equation \ref{log_cobb_douglas_1}. Then:
+\begin{enumerate}
+    \item it is non-linear;
+    \item it is differentiable; and
+    \item it is well-defined for all strictly positive inputs;
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+By direct inspection of equation \ref{log_cobb_douglas_1}, items 1 and 2 hold. Item 3 is satisfied because, for all strictly positive inputs \(x_i > 0\), the logarithm \(\ln x_i\) is defined, the weighted sum \(\sum_i \alpha_i \ln x_i\) is well-defined, and the exponential function \(e^{(\cdot)}\) is defined for all real numbers.
+\end{proof}
+
+\begin{flushleft}
+$\square$ $\square$
+\end{flushleft}
+
+% End of Propostion
+
+% First Lemma
+\begin{lemma} \label{lemma_continuity}
+       The Cobb--Douglas activation function defined in equation \ref{log_cobb_douglas_1} is locally Lipschitz continuous.
+\end{lemma}
+
+\begin{proof}
+Let $f:A \subset \mathbb{R}^n \to \mathbb{R}$ and let $a \in A$. 
+We say that the function $f$ is \emph{continuous} at the point $a$ if, for every $\varepsilon > 0$, there exists a $\delta > 0$ such that, for all $x \in A$,
+
+\begin{equation}
+\|x - a\| < \delta \;\; \Rightarrow \;\; |f(x) - f(a)| < \varepsilon.
+\end{equation}
+
+In symbols:
+
+\begin{equation}
+(\forall \varepsilon > 0)(\exists \delta > 0)(\forall x \in A)(\|x - a\| < \delta \Rightarrow |f(x) - f(a)| < \varepsilon).
+\end{equation}
+
+This can be easily proved given that
+
+\begin{equation}\label{cobb-douglas-multivariate}
+    y = e^{\sum_{i=1}^n \alpha_i \ln x_i} =  e^{z},
+\end{equation}
+
+where $z = \sum_{i=1}^n \alpha_i \ln x_i, \forall x_i > 0$.  
+
+Equation \eqref{cobb-douglas-multivariate} is Lipschitz continuous on a compact subset $K \subset (a,b)^n$, since the gradient of $f$,
+\begin{equation}
+\nabla f(x) = \left(\frac{\partial f}{\partial x_1}, \dots, \frac{\partial f}{\partial x_n}\right)
+= \left(\frac{\alpha_1}{x_1} e^z, \dots, \frac{\alpha_n}{x_n} e^z\right),
+\end{equation} is bounded on $K$.  
+
+By the mean value theorem in several variables, for $x,y \in K$ there exists $c$ on the segment joining $x$ and $y$ such that:
+
+\begin{equation} \label{multivariate-mvt}
+    f(x)-f(y) = \nabla f(c) \cdot (x-y).
+\end{equation}
+
+Thus,
+
+\begin{equation}
+    |f(x)-f(y)| \leq \|\nabla f(c)\| \, \|x-y\| \leq M \|x-y\|,
+\end{equation}
+
+for some $M>0$ depending only on $K$.  
+
+Hence $f$ is Lipschitz  continuous on compact subsets of its domain, and therefore continuous. More generally, since each $x_i \mapsto \ln x_i$ is continuous for $x_i>0$, their weighted sum is continuous, and the exponential function is continuous for all real inputs, the composition
+\begin{equation} 
+   y = e^{\sum_{i=1}^n \alpha_i \ln x_i} 
+\end{equation}
+is continuous for all strictly positive $x_i$.
+\end{proof}
+
+\begin{flushleft}
+$\square$ $\square$
+\end{flushleft}
+
+% End of first Lemma
+
+% Second Lemma
+
+\begin{lemma} \label{lemma_nonconstant}
+    The Cobb--Douglas activation function defined in equation \ref{log_cobb_douglas_1} is nonconstant.
+\end{lemma}
+
+\begin{proof}
+The function can be rewritten as $y = \prod_{i=1}^n x_i^{\alpha_i}$.
+Assuming not all $\alpha_i = 0$, we can compute the partial derivative with respect to $x_1$ as an example:
+\begin{equation}
+    \frac{\partial y}{\partial x_1} = \alpha_1 \prod_{i=2}^n x_i^{\alpha_i} x_1^{\alpha_1-1}.
+\end{equation}
+This partial derivative is clearly not identically zero when $\alpha_1 \neq 0$ and $x_i > 0$ for all $i$. 
+For instance, at the point $\mathbf{x} = (1, 1, \ldots, 1)$:
+\[
+\frac{\partial y}{\partial x_1}(1,1,\ldots,1) = \alpha_1 \neq 0.
+\]
+Since there exists a point where the partial derivative is nonzero, the function cannot be constant.
+\end{proof}
+
+\begin{flushleft}
+$\square$ $\square$
+\end{flushleft}
+
+% End of Second Lemma
+
+% First Theorem
+The reasoning developed previously allows us to arrive at an essential property for an activation function: it satisfies the conditions of the Universal Approximation Theorem - UAT \citep{cybenko1989approximation,hornik1989multilayer}. This theorem guarantees that neural networks with this activation function can approximate any continuous function on compact domains, ensuring good representational properties for statistical learning.
+
+\begin{theorem} [Universal Approximation Property of the Cobb-Douglas Activation Function]  \label{theorem_1}
+The Cobb-Douglas activation function defined by equation \ref{log_cobb_douglas_1} is capable of arbitrarily accurate approximation to any real valued continuous functions over a compact set, i.e., complies with the UAT.
+\end{theorem}
+
+\begin{proof}
+    The result follows directly from the universal approximation theorem of 
+    \cite{hornik1989multilayer}, which establishes that multilayer feedforward networks with any nonconstant, bounded, and continuous activation function can approximate any continuous function on compact domains arbitrarily well. Given the continuity established in Lemma \ref{lemma_continuity} and the nonconstant property proved in Lemma \ref{lemma_nonconstant}, and noting that continuous functions are bounded on compact sets, all conditions of Hornik's theorem are satisfied.     
+\end{proof}
+
+\noindent $\square \square$
+% End of First Theorem
+
+However, to ensure the viability of function \ref{log_cobb_douglas_1} as an activation function, an additional property is required beyond Proposition \ref{proposition_1} and Theorem \ref{theorem_1}, namely, control over its gradient values to minimize or prevent the occurrence of vanishing and exploding gradients.
+
+For a generic function of type \ref{log_cobb_douglas_1}, this property cannot be guaranteed because:
+
+\begin{equation} \label{log_cobb_douglas_derivative}
+    \frac{\partial y}{\partial x_i} = \frac{\alpha_i}{x_i}y.
+\end{equation}
+
+Therefore, gradient values can either explode or vanish depending on how the coefficients and input values $x_i$ behave. 
+
+An implicit requirement for function \ref{log_cobb_douglas_1} to comply with the UAT is boundedness. This condition is consistent with the need to avoid vanishing or exploding gradients. In the present case, we will constrain $x_i \in [\varepsilon,1]$ and $\sum \alpha_i=1$, therefore we can state the following theorem.
+
+% Second Theorem
+\begin{theorem} [Cobb--Douglas Activation Function Numerical Stability] \label{theorem_2}
+Let $f$ be the Cobb-Douglas activation function defined by equation \ref{log_cobb_douglas_1}. Under the constraints $x_i \in [\varepsilon, 1]$ (with $\varepsilon > 0$) and $\alpha_i \geq 0$, $\sum_{i=1}^n \alpha_i = 1$, the partial derivatives $\frac{\partial y}{\partial x_i}$ and $\frac{\partial y}{\partial \alpha_i}$ are bounded above and below away from zero, ensuring numerical stability against vanishing and exploding gradients.
+\end{theorem}
+
+\begin{proof}
+
+    We will establish the upper e lower bounds for each gradient. This follows from equation \ref{log_cobb_douglas_derivative}. 
+
+    \textbf{Gradient with respect to $x_i$}:
+    \begin{enumerate}
+    \item \textbf{Lower Bound}: When $x_i = 1$ and $x_j = \varepsilon$ for $j \neq i$:
+    \begin{equation}
+    \left|\frac{\partial y}{\partial x_i}\right| = \alpha_i \cdot \varepsilon^{1-\alpha_i} > 0
+    \end{equation}
+    Bounded away from zero if $0<\alpha_i\leq1$.
+    \item \textbf{Upper Bound}: When $x_i = \varepsilon$ and $x_j = 1$ for $j \neq i$:
+    \begin{equation}
+    \left|\frac{\partial y}{\partial x_i}\right| = \frac{\alpha_i}{\varepsilon^{1-\alpha_i}} \leq \frac{1}{\varepsilon}
+    \end{equation}
+
+    \textbf{Gradient with respect to $\alpha_i$}:
+    \item \textbf{Parameter Gradient - Lower Bound}: When all $x_j = \varepsilon$:
+    \begin{equation}
+    \left|\frac{\partial y}{\partial \alpha_i}\right| = |y \cdot \ln x_i| = \varepsilon \cdot |\ln \varepsilon| > 0
+    \end{equation}
+    \item \textbf{Parameter Gradient - Upper Bound}: When $x_i = \varepsilon$ and other $x_j = 1$:
+    \begin{equation}
+    \left|\frac{\partial y}{\partial \alpha_i}\right| = |y \cdot \ln x_i| = 1 \cdot |\ln \varepsilon| = |\ln \varepsilon|
+    \end{equation}
+    Thus: $\varepsilon|\ln\varepsilon| \leq \left|\frac{\partial y}{\partial \alpha_i}\right| \leq |\ln\varepsilon|$
+    \end{enumerate}
+
+All gradients are bounded away from zero and infinity, proving numerical stability.
+\end{proof}
+
+\noindent $\square \square$
+% End of Second Theorem
+
+Thus, based on the evidence presented in this section, we can establish that the function~\ref{log_cobb_douglas_1} constitutes an appropriate activation function under the stipulated domain constraints, which allow us to define the following corollary.
+
+% Corollary
+\begin{corollary}[Cobb-Douglas as a Valid Activation Function] \label{corollary}
+The Cobb-Douglas function defined in equation \ref{log_cobb_douglas_1} constitutes a valid activation function for neural networks under the constraints $\varepsilon \leq x_i \leq 1$ (with $\varepsilon > 0$) and $\alpha_i \geq 0$, $\sum_{i=1}^n \alpha_i = 1$, as it satisfies:
+\begin{enumerate}
+    \item Non-linearity, differentiability, and well-definedness for strictly positive inputs;
+    \item Compliance with the conditions of the Universal Approximation Theorem \citep{hornik1989multilayer};
+    \item Numerically stable gradient propagation, avoiding both vanishing and exploding gradients.
+\end{enumerate}
+\end{corollary}
+
+\begin{proof}
+Direct application of the results from Theorems \ref{theorem_1}, \ref{theorem_2} and Proposition \ref{proposition_1}.
+\end{proof}
+\noindent $\square \square$
+% End of Corollary
+
+Given the mathematical proofs that guarantee the equivalence between artificial neural networks and the IOM model, as well as the assurance that the Cobb-Douglas function is an activation function with desirable properties (Corollary \ref{corollary}), we now initiate a series of simulation experiments to verify whether this model indeed enhances the explainability of the estimated parameters. Based on simulations where the true parameter values are known, we can verify to what extent a Neural IOM generates better impact estimates of the coefficients compared to a traditional feedforward neural network.
+
+\section{Simulation Experiment}
+
+In order to test our proposed framework, we designed an extensive set of simulated experiments to evaluate its properties under different scenarios. These theoretical cases aim to verify whether our Neural IOM is capable of generating estimates closer to the parameters used at the real DGP. Essentially, we estimate the value of each feature based on the recursive process of accumulating the impact of the coefficients (elasticities), as defined in equations \ref{cobb_douglas_composition} and \ref{elasticity}. By recursively applying the transformations, the compounded effect of the coefficients on the final output is captured, reflecting how 1\% of variation in each feature impacts the target.
+
+Hence, we designed two base scenarios for our forecasting exercises:
+\begin{enumerate}
+\item Data generated from a Linear Model, with two sub-scenarios: one where all features are available, and another with only a subset of features.
+\item Data generated from a Logarithmic Model, also with two sub-scenarios: one where all features are available, and another with only a subset of features.
+\end{enumerate}
+
+This experiment aims to analyze the ability of the Neural IOM model to adapt and generate the most accurate estimates for the coefficients of a model that produces the true DGP, in cases where all information is available and in cases where it is not. The evaluation of the results will be based on two types of metrics: the accuracy of the estimated model and the closeness of the estimated coefficient vectors to those produced by the real DGP.
+
+\textbf{Accuracy}
+
+Accuracy is not the primary objective of the Neural IOM; therefore, we recognize that, in certain cases, t may be acceptable to sacrifice a degree of accuracy in order to achieve greater interpretability of the results. Nevertheless, accuracy remains a fundamental criterion for evaluating any model. Hence, this study adopts the conventional performance metrics of Mean Squared Error (MSE) and Mean Absolute Error (MAE), which provide standardized measures of the deviations between the estimated outputs and the true values, without focusing on the specific limitations of different accuracy metrics.
+
+\textbf{Closeness to True Values}
+
+With respect to the model's ability to generate coefficients close to the true values of the DGP, the following metrics will be employed:
+
+\begin{enumerate}
+    \item \textit{Cosine Similarity:} This metric measures the cosine of the angle between the estimated coefficient vector $\hat{\beta}$ and the true coefficient vector $\beta$. It is defined as:
+    \[
+    \text{Cosine Similarity} = \frac{\hat{\beta} \cdot \beta}{\|\hat{\beta}\| \, \|\beta\|},
+    \]
+    where $\cdot$ denotes the dot product and $\|\cdot\|$ the Euclidean norm. Values close to 1 indicate high similarity between the vectors.
+
+    \item \textit{Spearman's Rank Correlation Coefficient:} This non-parametric metric evaluates the monotonic relationship between the estimated coefficients $\hat{\beta}$ and the true coefficients $\beta$ based on their ranks. It is defined as:
+    \[
+    \rho = 1 - \frac{6 \sum_{i=1}^{n} d_i^2}{n(n^2-1)},
+    \]
+    where $d_i$ is the difference between the ranks of $\hat{\beta}_i$ and $\beta_i$, and $n$ is the number of coefficients. Values close to 1 indicate strong positive rank correlation.
+\end{enumerate}
+
+Therefore, after estimating the coefficient vectors using the Neural IOM, a comparative analysis will be conducted to evaluate the percentage impact of each feature on the target variable in the true model. These results will then be compared with the values estimated by the Cobb-Douglas coefficients in the Neural IOM, which are the elasticities. The quantification of how closely these impacts match will be performed using the Cosine Similarity and Spearman's Rank Correlation Coefficient.
+
+In the experimental case where one or more variables are excluded from the training subset, the vector used for comparison with the estimated coefficients will consist of the population values of the remaining coefficients, excluding the variables that were omitted. This ensures that the evaluation focuses only on the features that the model actually observed during training.
+
+\textbf{Benchmarks}
+
+The field of Neural Architecture Search (NAS) is very broad. NAS refers to the automated process of designing neural network architectures, aiming to identify models that achieve high performance on a given task. In fact, finding the optimal architecture is a complex problem that demands substantial computational resources. For a detailed analysis of NAS, see \cite{salmani2025systematic}. The main steps for a complete NAS are the following:
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  grow=right,                
+  edge from parent/.style={draw, -latex},
+  every node/.style={font=\small, align=left, text width=2.8cm},
+  level 1/.style={sibling distance=30mm, level distance=50mm},
+  level 2/.style={sibling distance=30mm, level distance=50mm}
+  ]
+
+\node {Neural Architecture Search (NAS)}
+  child {node {Search Space}}
+  child {node {Search Strategy}}
+  child {node {Validation Strategy}};
+
+\end{tikzpicture}
+\caption{Main components of Neural Architecture Search (NAS).}
+\end{figure}
+
+The Search Space encompasses all model hyperparameters, including the number of layers, activation functions, and other architectural characteristics that define the structure of the neural network. The Search Strategy concerns the methodological procedures employed to identify the most suitable configuration within this space. Typically, such strategies rely on optimization and exploration techniques, which make use of the Validation Strategy to systematically assess candidate architectures and ultimately determine the one that achieves the best performance for the target problem.
+
+In the context of this study, \textit{the benchmarks are restricted to standard feedforward neural networks}. The purpose is to assess whether the proposed Neural IOM can provide more accurate estimates of real DGP coefficients compared to a conventional neural network well adjusted to the data. Therefore, the objective is to employ a NAS-inspired search methodology to identify the best possible architecture for a standard feedforward neural network, which will then serve as the basis for comparison with the Neural IOM.
+
+Based on \cite{salmani2025systematic}, our search methodology employs a Search-Space Layers-Based approach, utilizing Random Search as the search strategy and Full-Training for evaluation. Specifically, a large number of random configurations are generated, and full training is applied to each to assess their performance. The hyperparameters explored in this process include:
+
+\begin{enumerate}
+\item Number of input features – Randomly selected between 1 and 5 features.
+\item Number of feedforward layers – Randomly selected between 1 and 5 layers.
+\item Number of neurons per layer – Determined as $\min(32, 4 \cdot \text{Number of Features})$.
+\item Dropout rate – Randomly chosen from the set {0.2, 0.3, 0.4, 0.5}.
+\item Activation function – Randomly selected from the following set of functions: ${ReLU,Sigmoid,Tanh,LeakyReLU,ELU,GELU,SELU,Softplus}$
+\end{enumerate}
+
+No validation is performed within each individual experiment. Instead, by simulating this process many times, we aim to estimate which architecture is expected to yield the best results, following a procedure analogous to Neural Architecture Search (NAS). All hyperparameters identified as optimal through this simulated search are subsequently applied to the Neural IOM, with the exception of the activation function, which in this case follows a Cobb-Douglas specification. A full NAS approach will be employed in the empirical analysis in the next section.
+
+\subsection{Experiment Setup}
+
+Each experiment was carried out on time series comprising 10,000 observations over 1,000 epochs, with each configuration repeated 1,000 times, employing the Adam optimization algorithm \citep{adam2014method} with a fixed learning rate of 0.0001.
+
+To prevent overfitting and improve computational efficiency, an early stopping mechanism with a patience of 5 epochs was applied. This means that training was halted if the validation performance did not improve for 5 consecutive epochs, allowing the model to retain the best weights achieved during the training process. The computations were performed using an NVIDIA GeForce RTX 3050 GPU.
+
+\subsection{Experiments 1 and 2}
+
+Experiments 1 and 2 are based on the following functional form:
+
+\begin{equation}
+    y = X \beta + \epsilon
+\end{equation}
+
+where: 
+\begin{itemize}
+    \item \(y \in \mathbb{R}^n\) denotes the response vector (target);
+    \item \(X \in \mathbb{R}^{n \times p}\) represents the feature matrix (inputs);
+    \item \(\beta \in \mathbb{R}^p\) is the coefficient vector (weights);
+    \item \(\epsilon \sim \mathcal{N}(0, \sigma^2)\) corresponds to the additive noise term.
+\end{itemize}
+
+In Experiment 1, all elements of \(y\) and \(X\) are used directly as the target and features, respectively, for both the feedforward neural networks and the Neural IOM.
+
+
+\clearpage
+\bibliographystyle{plainnat}
+\bibliography{sample.bib}
+
+\end{document}
+
+

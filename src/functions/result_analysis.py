@@ -3,60 +3,75 @@
 # =============================================================================
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 # =============================================================================
 # 2 - Feature Impact
 # =============================================================================
-
-#-----------
-# Function 1 - Simulation Experiment Analysis
-import pandas as pd
-
-def generate_average_metrics_separated(lst_result_all):
+def generate_average_metrics_with_ci(lst_result_all, confidence=0.95):
     """
-    Generates four DataFrames with the mean values of:
-    - Cosine similarity metrics
-    - Spearman correlation metrics
-    - MAE metrics
-    - MSE metrics
-
+    Generates DataFrames with mean and confidence intervals for selected metrics.
+    
     Parameters
     ----------
-    lst_result_all : list of lists of tuples
-        Each inner list corresponds to an experiment and contains (key, value) metric pairs.
-
+    lst_result_all : list of list of tuples
+        Each element is a list of tuples (metric_name, value) for a single experiment.
+    confidence : float, optional
+        Confidence level for CI (default 0.95).
+    
     Returns
     -------
-    df_cosine_mean : pd.DataFrame
-        Average of cosine similarity metrics.
-
-    df_spearman_mean : pd.DataFrame
-        Average of Spearman correlation metrics.
-
-    df_mae_mean : pd.DataFrame
-        Average of MAE metrics.
-
-    df_mse_mean : pd.DataFrame
-        Average of MSE metrics.
+    tuple of pd.DataFrame
+        - df: raw metrics as DataFrame
+        - df_cosine_ci, df_spearman_ci, df_mae_ci, df_mse_ci
+          DataFrames with mean and CI for each metric group.
+        - df_topk_pair_ci, df_topk_rank_ci
+          DataFrames with mean and CI for top-k pairwise metrics.
     """
-    # Convert experiment results to DataFrame
+    
+    # Convert list of tuples to DataFrame
     df = pd.DataFrame([{k: v for k, v in res} for res in lst_result_all])
-
-    # Column groups
+    
+    # Define metric groups
     cosine_cols = [col for col in df.columns if 'cossine' in col]
     spearman_cols = [col for col in df.columns if 'spearman' in col]
     mae_cols = [col for col in df.columns if 'mae' in col]
     mse_cols = [col for col in df.columns if 'mse' in col]
-
-    # Compute means
-    df_cosine_mean = df[cosine_cols].mean().to_frame(name='mean').reset_index().rename(columns={'index': 'metric'})
-    df_spearman_mean = df[spearman_cols].mean().to_frame(name='mean').reset_index().rename(columns={'index': 'metric'})
-    df_mae_mean = df[mae_cols].mean().to_frame(name='mean').reset_index().rename(columns={'index': 'metric'})
-    df_mse_mean = df[mse_cols].mean().to_frame(name='mean').reset_index().rename(columns={'index': 'metric'})
-
-    return df, df_cosine_mean, df_spearman_mean, df_mae_mean, df_mse_mean
-
+    
+    # Top-k separate
+    topk_pair_cols = [col for col in df.columns if 'topk_pair' in col]
+    topk_rank_cols = [col for col in df.columns if 'topk_rank' in col]
+    
+    # Function to compute mean and confidence interval
+    def compute_mean_ci(data):
+        mean = np.mean(data)
+        sem = stats.sem(data, nan_policy='omit')
+        h = sem * stats.t.ppf((1 + confidence) / 2., len(data)-1)
+        return mean, mean - h, mean + h
+    
+    # Create DataFrame with CI for a group of metrics
+    def create_ci_df(columns):
+        results = []
+        for col in columns:
+            mean, ci_lower, ci_upper = compute_mean_ci(df[col].dropna())
+            results.append({
+                'metric': col,
+                'mean': mean,
+                'ci_lower': ci_lower,
+                'ci_upper': ci_upper,
+                'ci_95': f"{mean:.4f} ({ci_lower:.4f}-{ci_upper:.4f})"
+            })
+        return pd.DataFrame(results)
+    
+    # Create CI DataFrames
+    df_cosine_ci = create_ci_df(cosine_cols)
+    df_spearman_ci = create_ci_df(spearman_cols)
+    df_mae_ci = create_ci_df(mae_cols)
+    df_mse_ci = create_ci_df(mse_cols)
+    df_topk_pair_ci = create_ci_df(topk_pair_cols)
+    df_topk_rank_ci = create_ci_df(topk_rank_cols)
+    
+    return df, df_cosine_ci, df_spearman_ci, df_mae_ci, df_mse_ci, df_topk_pair_ci, df_topk_rank_ci
 
 # =============================================================================
 # =============================================================================
-

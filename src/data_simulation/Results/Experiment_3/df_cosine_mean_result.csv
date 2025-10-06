@@ -1,9 +1,0 @@
-metric,mean
-cobb_cossine,0.9542491796958853
-nn_cossine,0.9156811184923281
-nn_cossine_ig,0.896017849445343
-nn_shap_cossine,0.8945930216905458
-nn_shap_cossine_dl,0.8960476517677307
-nn_shap_cossine_gs,0.9098074436187744
-nn_shap_cossine_fa,0.9104663133621216
-nn_shap_cossine_nt,0.8943337202072144

@@ -1,9 +1,0 @@
-metric,mean
-cobb_spearman,0.4430005431034517
-nn_spearman,-0.029504800329739112
-nn_spearman_ig,0.0036214037720065945
-nn_shap_spearman,-0.015732322540598462
-nn_shap_spearman_dl,0.01232421614189079
-nn_shap_spearman_gs,-0.011909922751648745
-nn_shap_spearman_fa,0.029905590456186494
-nn_shap_spearman_nt,0.00828612793142682

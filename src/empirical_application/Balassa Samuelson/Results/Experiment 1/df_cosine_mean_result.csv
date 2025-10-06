@@ -1,0 +1,9 @@
+metric,mean
+cobb_cossine,1.0
+nn_cossine,1.0
+nn_cossine_ig,1.0
+nn_shap_cossine,1.0
+nn_shap_cossine_dl,1.0
+nn_shap_cossine_gs,1.0
+nn_shap_cossine_fa,1.0
+nn_shap_cossine_nt,1.0

@@ -24,7 +24,6 @@ from captum.attr import LayerConductance, LayerActivation, LayerIntegratedGradie
 from captum.attr import IntegratedGradients, DeepLift, GradientShap, NoiseTunnel, FeatureAblation
 
 # Built-in
-from src.functions.linear_data_generator import LinearDataGenerator
 from src.functions.feature_impact import compute_linear_regression_feature_impact_percent
 from src.functions.feature_impact import cobb_douglas_impact,cobb_douglas_log_impact,model_alphas,compute_shap_impact_percent
 from src.functions.feature_impact import compare_importance_cosine,normalize_importance,compare_importance_spearman
