@@ -9,14 +9,15 @@ os.chdir(wkdir)
 # =============================================================================
 # External Packages
 import time
-import numpy as np
 import pandas as pd
+import numpy as np
 import torch
 import random
 import torch.nn as nn
 import torch.optim as optim
+import statsmodels.api as sm
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -24,7 +25,8 @@ from captum.attr import LayerConductance, LayerActivation, LayerIntegratedGradie
 from captum.attr import IntegratedGradients, DeepLift, GradientShap, NoiseTunnel, FeatureAblation
 
 # Built-in
-from src.functions.feature_impact import compute_linear_regression_feature_impact_percent
+from src.functions.data_generator import DGPGenerator
+from src.functions.feature_impact import compute_linear_regression_feature_impact_percent,topk_pairwise_rank_agreement,topk_rank_correlation
 from src.functions.feature_impact import cobb_douglas_impact,cobb_douglas_log_impact,model_alphas,compute_shap_impact_percent
 from src.functions.feature_impact import compare_importance_cosine,normalize_importance,compare_importance_spearman
 from src.functions.neural_network_function import FlexibleNeuralNetwork
@@ -32,15 +34,16 @@ from src.functions.cobb_douglas_act_function import CobbDouglasActivationFunctio
 from src.functions.log_cobb_douglas_act_function import CobbDouglasLogActivationFunction
 from src.functions.cobb_doulgas_neural_network_function import CobbDouglasNeuralNetwork
 from src.functions.log_cobb_doulgas_neural_network_function import LogCobbDouglasNeuralNetwork
-from src.functions.result_analysis import generate_average_metrics_separated
+from src.functions.result_analysis import generate_average_metrics_with_ci
 
 # =============================================================================
 # 2 - Parameters
 # =============================================================================
+result_list = []
 random_state = 0
-test_sample_size = 0.1
-valid_sample_size = 0.1
-n_samples = 200
+test_sample_size = 0.2
+valid_sample_size = 0.2
+n_samples = 10
 
 #--------
 # 2.1 - Experiment Parameters
@@ -55,23 +58,22 @@ n_years = end_year - start_year
     # ccon - Real consumption of households and government, at current PPPs (in mil. 2017US$)
     # cda - Real domestic absorption, (real consumption plus investment), at current PPPs (in mil. 2017US$)
 # Existing Variables
-variables = ['countrycode','year','rgdpo', 'pop','ccon','cda','cgdpo']
+variables = ['countrycode','year','rgdpna', 'pop','rnna']
 # New Variables
 gdp_growth_avg_variable_name = 'gdp_growth_avg'
 pop_growth_avg_variable_name = 'pop_growth_avg'
 inv_rate_avg_variable_name = 'inv_rate_avg'
-gdp_percapita_start_variable_name = 'gdp_percapita_start'
 # Set of variables from regression
 y_experiment_1 = [gdp_growth_avg_variable_name]
-x_experiment_1 = [pop_growth_avg_variable_name,inv_rate_avg_variable_name,gdp_percapita_start_variable_name]
+x_experiment_1 = [pop_growth_avg_variable_name,inv_rate_avg_variable_name]
 number_of_features = len(x_experiment_1)
 
 #--------
 # Neural Network Parameters
-epochs_nas = 2000
-epochs = 20000
+epochs_nas = 5000
+epochs = 10000
 # neural_network_hidden_layers = [4,3]
-learning_rate = 0.0001
+learning_rate = 0.00001
 tries_before_stopping = 5
 
 #--------
@@ -97,67 +99,70 @@ torch.backends.cudnn.benchmark = False     # Disable Non Deterministic
 # =============================================================================
 # 3 - Import PWT Data
 # =============================================================================
+# 3.1 - OS
 wkdir = "/home/jeronymo/Documentos/neural_cge_network/src/empirical_application"
 os.chdir(wkdir)
 
-# 3.1 Import data
+# 3.2 - Country COdes
+variables = ["countrycode","year","rgdpna","pop","rnna"]
+start_year = 1971  # ajustar conforme necessário
+
 pwt_data = pd.read_excel('pwt_data.xlsx')
-base_df = pwt_data[variables]
+df = pwt_data[variables]
 
-# 3.2 Set starting year as 1971
-base_df = base_df[base_df['year']>=start_year]
+# 3.3 - Filter
+df = df[df['year'] >= start_year]
 
-# 3.3 Create Variables
-# GDP Per capita
-base_df['gdp_percapita'] = base_df['rgdpo'] / base_df['pop']
-# Investment Rate
-base_df['inv_rate'] = (base_df['cda']  - base_df['ccon']) / base_df['cgdpo']
+# 3.4 - Y per capita
+df["Y_per_L"] = df["rgdpna"] / df["pop"]
 
-# 3.4 Growth Rate
-base_df = base_df.sort_values(by=['countrycode', 'year'])
-# 3.4.1 Gdp_percapita
-df_1971 = base_df[base_df['year'] == start_year][['countrycode', 'gdp_percapita']].rename(columns={'gdp_percapita': 'gdp_start'})
-df_2003 = base_df[base_df['year'] == end_year][['countrycode', 'gdp_percapita']].rename(columns={'gdp_percapita': 'gdp_end'})
-gdp_df_growth = pd.merge(df_1971, df_2003, on='countrycode')
-gdp_df_growth[gdp_growth_avg_variable_name] = (np.log(gdp_df_growth['gdp_end']) - np.log(gdp_df_growth['gdp_start'])) / n_years * 100
-# 3.4.2 Population
-df_1971 = base_df[base_df['year'] == start_year][['countrycode', 'pop']].rename(columns={'pop': 'pop_start'})
-df_2003 = base_df[base_df['year'] == end_year][['countrycode', 'pop']].rename(columns={'pop': 'pop_end'})
-pop_df_growth = pd.merge(df_1971, df_2003, on='countrycode')
-pop_df_growth[pop_growth_avg_variable_name] = (np.log(pop_df_growth['pop_end']) - np.log(pop_df_growth['pop_start'])) / n_years * 100
-# 3.4.3 Investment Rate
-inv_rate_avg = base_df.groupby('countrycode')['inv_rate'].mean().reset_index()
-inv_rate_avg = inv_rate_avg.rename(columns={'inv_rate': inv_rate_avg_variable_name})
-# 3.4.4 Initial Income
-starting_income = base_df[base_df['year'] == start_year][['countrycode', 'gdp_percapita']]
-scaler = StandardScaler()
-starting_income['gdp_percapita'] = scaler.fit_transform(starting_income[['gdp_percapita']]) 
-starting_income = starting_income.rename(columns={'gdp_percapita': gdp_percapita_start_variable_name})
+# 3.5 -  Pop Growth
+df_period = pwt_data[(pwt_data["year"] >= 1960) & (pwt_data["year"] <= 1985)].copy()
+pop_growth = (
+    df_period.groupby("countrycode")["pop"]
+    .agg(["first", "last"])
+    .reset_index()
+)
+pop_growth["n"] = (np.log(pop_growth["last"]) - np.log(pop_growth["first"])) / (1985 - 1960)
 
-# 3.5 Create Dataframe
-experiment_1_df = pd.DataFrame()
-experiment_1_df['countrycode'] = df_1971['countrycode']
-experiment_1_df = experiment_1_df.merge(gdp_df_growth[['countrycode', 'gdp_growth_avg']], on='countrycode', how='left')
-experiment_1_df = experiment_1_df.merge(pop_df_growth[['countrycode', 'pop_growth_avg']], on='countrycode', how='left')
-experiment_1_df = experiment_1_df.merge(inv_rate_avg[['countrycode', 'inv_rate_avg']], on='countrycode', how='left')
-experiment_1_df = experiment_1_df.merge(starting_income[['countrycode', 'gdp_percapita_start']], on='countrycode', how='left')
-experiment_1_df = experiment_1_df.dropna()
+# 3.6 - Investment
+inv_mean = (
+    df_period.groupby("countrycode")["rnna"]
+    .mean()
+    .reset_index()
+    .rename(columns={"rnna": "s"})
+)
 
-# 3.6 Train Test Split (with numpy)
-y = experiment_1_df[y_experiment_1]
-x = experiment_1_df[x_experiment_1]
+# 3.7 - data Prep
+reg_df = df[["countrycode","Y_per_L"]].merge(pop_growth[["countrycode","n"]], on="countrycode")
+reg_df = reg_df.merge(inv_mean, on="countrycode")
 
-X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_sample_size, random_state=random_state)
+reg_df = reg_df[(reg_df["Y_per_L"] > 0) & (reg_df["s"] > 0) & (reg_df["n"] > 0)]
+reg_df = reg_df.replace([np.inf, -np.inf], np.nan).dropna()
+
+reg_df["ln_Y_per_L"] = np.log(reg_df["Y_per_L"])
+reg_df["ln_s"] = np.log(reg_df["s"])
+reg_df["ln_n"] = np.log(reg_df["n"] + 0.05) 
+
+X = reg_df[["ln_s","ln_n"]]
+y = reg_df["ln_Y_per_L"]
+
+# 3.8 - Train Test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_sample_size, random_state=random_state)
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=valid_sample_size, random_state=random_state)
 
-# 3.7 Adjust to numpy array for FNN
-X_train_tensor = torch.from_numpy(X_train.values).float().to(device)
-X_valid_tensor = torch.from_numpy(X_valid.values).float().to(device)
-X_test_tensor  = torch.from_numpy(X_test.values).float().to(device)
+# 3.9 - Tensor Prep
+X_train_tensor = torch.from_numpy(X_train.values.astype(np.float32)).to(device)
+X_valid_tensor = torch.from_numpy(X_valid.values.astype(np.float32)).to(device)
+X_test_tensor  = torch.from_numpy(X_test.values.astype(np.float32)).to(device)
 
-y_train_tensor = torch.from_numpy(y_train.values).float().to(device)
-y_valid_tensor = torch.from_numpy(y_valid.values).float().to(device)
-y_test_tensor  = torch.from_numpy(y_test.values).float().to(device)
+y_train_tensor = torch.from_numpy(y_train.values.astype(np.float32)).reshape(-1,1).to(device)
+y_valid_tensor = torch.from_numpy(y_valid.values.astype(np.float32)).reshape(-1,1).to(device)
+y_test_tensor  = torch.from_numpy(y_test.values.astype(np.float32)).reshape(-1,1).to(device)
+
+y_train = y_train.values.reshape(-1, 1)
+y_valid = y_valid.values.reshape(-1, 1)
+y_test  = y_test.values.reshape(-1, 1)
 
 # =============================================================================
 # 4 - Linear Regression
@@ -206,7 +211,7 @@ random_configs = [generate_random_config(number_of_features) for _ in range(n_sa
 result_random_search = []
 
 for random_param in random_configs:
-    fnn = FlexibleNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+    fnn = FlexibleNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train, y_valid, y_test, device = device)
     fnn_model, fnn_train_losses, fnn_val_losses, fnn_best_val, fnn_test_loss, fnn_architecture, fnn_weights = fnn.train_model(
             hidden_layers=random_param['neural_network_hidden_layers'],
             activation_fn=random_param['activation'],
@@ -233,7 +238,7 @@ activation_fn = random_configs[best_architecture]['activation']
 # 6 - Basic Neural Network
 # =============================================================================
 # Initialize model and train on device
-fnn = FlexibleNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+fnn = FlexibleNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train, y_valid, y_test, device = device)
 
 fnn_model, fnn_train_losses, fnn_val_losses, fnn_best_val, fnn_test_loss, fnn_architecture, fnn_weights = fnn.train_model(
 hidden_layers=neural_network_hidden_layers,
@@ -272,7 +277,7 @@ random_configs = [generate_random_config(number_of_features) for _ in range(n_sa
 result_random_search_cobb = []
 
 for random_param in random_configs:
-    cobb_fnn = LogCobbDouglasNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+    cobb_fnn = LogCobbDouglasNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train, y_valid, y_test, device = device)
 
     cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
     hidden_layers=random_param['neural_network_hidden_layers'],
@@ -299,7 +304,7 @@ cobb_dropout_rt = random_configs[best_cobb_architecture]['dropout']
 # =============================================================================
 # 8 - Cobb-Douglas Neural Network
 # =============================================================================
-cobb_fnn = LogCobbDouglasNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train.values, y_valid.values, y_test.values, device = device)
+cobb_fnn = LogCobbDouglasNeuralNetwork(X_train.values, X_valid.values, X_test.values, y_train, y_valid, y_test, device = device)
 
 cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
 hidden_layers=cobb_hidden_layers,
@@ -338,6 +343,11 @@ r2_nn = r2_score(y_test, predicted_nn)
 # Real Feature Impact
 real_feature_impact = compute_linear_regression_feature_impact_percent(X_test, model)
 
+# Random Assigment
+min_val = X_train.min()
+max_val = X_train.max()
+random_feature_impact = np.random.uniform(low=min_val, high=max_val, size=real_feature_impact.shape)
+
 # Cobb-Douglas Impact calculation
 cobb_layers = model_alphas(cobb_weights)
     
@@ -368,7 +378,7 @@ for i in range(number_of_features):
     neural_network_feature_impact.append(mae.item())
     
 # SHAP values percentage impact
-shap_impact_percent = compute_shap_impact_percent(fnn_model, X_train.values, X_test.values, y_train.values)
+shap_impact_percent = compute_shap_impact_percent(fnn_model, X_train.values, X_test.values, y_train)
     
 # CAPTUM algorithms
 ig = IntegratedGradients(fnn_model)
@@ -406,89 +416,135 @@ importances_nt = importances_nt.detach().cpu().numpy()
 # =============================================================================
 # 11 - Results Aggregation
 # =============================================================================
-a_norm = normalize_importance(real_feature_impact)
-b_norm = normalize_importance(cobb_douglas_feature_impact)
-c_norm = normalize_importance(neural_network_feature_impact)
-
-cobb_douglas_feature_impact = np.array(cobb_douglas_feature_impact).reshape(-1, 1)
-neural_network_feature_impact = np.array(neural_network_feature_impact).reshape(-1, 1)
+cobb_douglas_feature_impact = np.array(cobb_douglas_feature_impact, dtype=float)
+neural_network_feature_impact = np.array(neural_network_feature_impact, dtype=float)
+shap_impact_percent = np.array(shap_impact_percent, dtype=float).ravel()
 
 # Coob Douglas Results
-cobb_spearman = compare_importance_spearman(real_feature_impact, cobb_douglas_feature_impact,True)
-cobb_cossine = compare_importance_cosine(real_feature_impact, cobb_douglas_feature_impact,True)
+cobb_spearman = compare_importance_spearman(real_feature_impact, cobb_douglas_feature_impact)
+cobb_cossine = compare_importance_cosine(real_feature_impact, cobb_douglas_feature_impact)
+cobb_topk_pair = topk_pairwise_rank_agreement(real_feature_impact, cobb_douglas_feature_impact,number_of_features)
+cobb_topk_rank = topk_rank_correlation(real_feature_impact, cobb_douglas_feature_impact,number_of_features)
+
+# Random Coef Results
+random_spearman = compare_importance_spearman(real_feature_impact, random_feature_impact)
+random_cossine = compare_importance_cosine(real_feature_impact, random_feature_impact)
+random_topk_pair = topk_pairwise_rank_agreement(real_feature_impact, random_feature_impact,number_of_features)
+random_topk_rank = topk_rank_correlation(real_feature_impact, random_feature_impact,number_of_features)
 
 # Neural Network Results
 # Basic Impact
-nn_spearman = compare_importance_spearman(real_feature_impact, neural_network_feature_impact,True)
-nn_cossine = compare_importance_cosine(real_feature_impact, neural_network_feature_impact,True)
+nn_spearman = compare_importance_spearman(real_feature_impact, neural_network_feature_impact)
+nn_cossine = compare_importance_cosine(real_feature_impact, neural_network_feature_impact)
+nn_topk_pair = topk_pairwise_rank_agreement(real_feature_impact, neural_network_feature_impact,number_of_features)
+nn_topk_rank = topk_rank_correlation(real_feature_impact, neural_network_feature_impact,number_of_features)
+
 # Shap Value
-nn_shap_spearman = compare_importance_spearman(real_feature_impact, shap_impact_percent,True)
-nn_shap_cossine = compare_importance_cosine(real_feature_impact, shap_impact_percent,True)
+nn_shap_spearman = compare_importance_spearman(real_feature_impact, shap_impact_percent)
+nn_shap_cossine = compare_importance_cosine(real_feature_impact, shap_impact_percent)
+nn_shap_topk_pair = topk_pairwise_rank_agreement(real_feature_impact, shap_impact_percent,number_of_features)
+nn_shap_topk_rank = topk_rank_correlation(real_feature_impact, shap_impact_percent,number_of_features)
+
 # Integrated Gradient
-nn_shap_spearman_ig = compare_importance_spearman(real_feature_impact, importances_ig,True)
-nn_shap_cossine_ig = compare_importance_cosine(real_feature_impact, importances_ig,True)  
+nn_shap_spearman_ig = compare_importance_spearman(real_feature_impact, importances_ig)
+nn_shap_cossine_ig = compare_importance_cosine(real_feature_impact, importances_ig)
+nn_shap_topk_pair_ig = topk_pairwise_rank_agreement(real_feature_impact, importances_ig,number_of_features)
+nn_shap_topk_rank_ig = topk_rank_correlation(real_feature_impact, importances_ig,number_of_features)
+
 # Deeplift
-nn_shap_spearman_dl = compare_importance_spearman(real_feature_impact, importances_dl,True)
-nn_shap_cossine_dl = compare_importance_cosine(real_feature_impact, importances_dl,True)  
+nn_shap_spearman_dl = compare_importance_spearman(real_feature_impact, importances_dl)
+nn_shap_cossine_dl = compare_importance_cosine(real_feature_impact, importances_dl)
+nn_shap_topk_pair_dl = topk_pairwise_rank_agreement(real_feature_impact, importances_dl,number_of_features)
+nn_shap_topk_rank_dl = topk_rank_correlation(real_feature_impact, importances_dl,number_of_features)
+
 # GradientShap
-nn_shap_spearman_gs = compare_importance_spearman(real_feature_impact, importances_gs,True)
-nn_shap_cossine_gs = compare_importance_cosine(real_feature_impact, importances_gs,True)  
+nn_shap_spearman_gs = compare_importance_spearman(real_feature_impact, importances_gs)
+nn_shap_cossine_gs = compare_importance_cosine(real_feature_impact, importances_gs)
+nn_shap_topk_pair_gs = topk_pairwise_rank_agreement(real_feature_impact, importances_gs,number_of_features)
+nn_shap_topk_rank_gs = topk_rank_correlation(real_feature_impact, importances_gs,number_of_features)
+
 # Feature Ablation
-nn_shap_spearman_fa = compare_importance_spearman(real_feature_impact, importances_fa,True)
-nn_shap_cossine_fa = compare_importance_cosine(real_feature_impact, importances_fa,True)  
+nn_shap_spearman_fa = compare_importance_spearman(real_feature_impact, importances_fa)
+nn_shap_cossine_fa = compare_importance_cosine(real_feature_impact, importances_fa)
+nn_shap_topk_pair_fa = topk_pairwise_rank_agreement(real_feature_impact, importances_fa,number_of_features)
+nn_shap_topk_rank_fa = topk_rank_correlation(real_feature_impact, importances_fa,number_of_features)
+
 # Noise Tunnel
-nn_shap_spearman_nt = compare_importance_spearman(real_feature_impact, importances_nt,True)
-nn_shap_cossine_nt = compare_importance_cosine(real_feature_impact, importances_nt,True)          
-   
+nn_shap_spearman_nt = compare_importance_spearman(real_feature_impact, importances_nt)
+nn_shap_cossine_nt = compare_importance_cosine(real_feature_impact, importances_nt)
+nn_shap_topk_pair_nt = topk_pairwise_rank_agreement(real_feature_impact, importances_nt,number_of_features)
+nn_shap_topk_rank_nt = topk_rank_correlation(real_feature_impact, importances_nt,number_of_features)  
 
-# Save as List
-result_list = []
-
-r2_cobb = r2_score(y_test, predicted_cobb_nn)
-r2_nn = r2_score(y_test, predicted_nn)
+# Store results   
 
 lst_result = [
+# Métricas básicas
 ('mae_nn', mae_nn),
-('mae_regression', mae_regression),
 ('mae_cobb_nn', mae_cobb_nn),
-('r2_cobb', r2_cobb),
-('r2_nn', r2_nn),
-('r2_regression', r2_regression),
 ('mse_nn', mse_nn),
 ('mse_cobb_nn', mse_cobb_nn),
-('mse_regression', mse_regression),
+
+# Cobb Douglas Results
 ('cobb_spearman', cobb_spearman),
 ('cobb_cossine', cobb_cossine),
+('cobb_topk_pair', cobb_topk_pair),
+('cobb_topk_rank', cobb_topk_rank),
+
+# Random Assigment Results
+('random_spearman', random_spearman),
+('random_cossine', random_cossine),
+('random_topk_pair', random_topk_pair),
+('random_topk_rank', random_topk_rank),
+
+# Neural Network Results - Basic Impact
 ('nn_spearman', nn_spearman),
 ('nn_cossine', nn_cossine),
-('nn_spearman_ig', nn_shap_spearman_ig),
-('nn_cossine_ig', nn_shap_cossine_ig),
+('nn_topk_pair', nn_topk_pair),
+('nn_topk_rank', nn_topk_rank),
+
+# Neural Network Results - SHAP
 ('nn_shap_spearman', nn_shap_spearman),
 ('nn_shap_cossine', nn_shap_cossine),
+('nn_shap_topk_pair', nn_shap_topk_pair),
+('nn_shap_topk_rank', nn_shap_topk_rank),
+
+# Neural Network Results - Integrated Gradients
+('nn_shap_spearman_ig', nn_shap_spearman_ig),
+('nn_shap_cossine_ig', nn_shap_cossine_ig),
+('nn_shap_topk_pair_ig', nn_shap_topk_pair_ig),
+('nn_shap_topk_rank_ig', nn_shap_topk_rank_ig),
+
+# Neural Network Results - DeepLIFT
 ('nn_shap_spearman_dl', nn_shap_spearman_dl),
 ('nn_shap_cossine_dl', nn_shap_cossine_dl),
+('nn_shap_topk_pair_dl', nn_shap_topk_pair_dl),
+('nn_shap_topk_rank_dl', nn_shap_topk_rank_dl),
+
+# Neural Network Results - GradientSHAP
 ('nn_shap_spearman_gs', nn_shap_spearman_gs),
 ('nn_shap_cossine_gs', nn_shap_cossine_gs),
+('nn_shap_topk_pair_gs', nn_shap_topk_pair_gs),
+('nn_shap_topk_rank_gs', nn_shap_topk_rank_gs),
+
+# Neural Network Results - Feature Ablation
 ('nn_shap_spearman_fa', nn_shap_spearman_fa),
 ('nn_shap_cossine_fa', nn_shap_cossine_fa),
+('nn_shap_topk_pair_fa', nn_shap_topk_pair_fa),
+('nn_shap_topk_rank_fa', nn_shap_topk_rank_fa),
+
+# Neural Network Results - Noise Tunnel
 ('nn_shap_spearman_nt', nn_shap_spearman_nt),
 ('nn_shap_cossine_nt', nn_shap_cossine_nt),
-('number_of_features', number_of_features),
-('neural_network_hidden_layers', neural_network_hidden_layers),
-('activition_function', activation_fn),
-('dropout', dropout_rt)
+('nn_shap_topk_pair_nt', nn_shap_topk_pair_nt),
+('nn_shap_topk_rank_nt', nn_shap_topk_rank_nt),
 ]
 
 result_list.append(lst_result)
 
-# R² results
-r2_results = [item for item in lst_result if item[0].startswith('r2_')]
-df_r2 = pd.DataFrame([dict(r2_results)])
-
 # =============================================================================
-# 12 - Final Results
+# 11 - Final Results WITH CONFIDENCE INTERVALS
 # =============================================================================
-df, df_cosine_mean, df_spearman_mean, df_mae_mean, df_mse_mean = generate_average_metrics_separated(result_list)
+df, df_cosine_ci, df_spearman_ci, df_mae_ci, df_mse_ci, df_topk_pair_ci, df_topk_rank_ci = generate_average_metrics_with_ci(result_list)
 
 # Save results
 wkdir = "/home/jeronymo/Documentos/neural_cge_network/src/empirical_application/Solow/Results/Experiment 1"

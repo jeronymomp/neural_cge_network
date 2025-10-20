@@ -1,9 +1,0 @@
-metric,mean
-cobb_spearman,0.9999999999999999
-nn_spearman,-0.9999999999999999
-nn_spearman_ig,-0.9999999999999999
-nn_shap_spearman,0.9999999999999999
-nn_shap_spearman_dl,-0.9999999999999999
-nn_shap_spearman_gs,-0.9999999999999999
-nn_shap_spearman_fa,-0.9999999999999999
-nn_shap_spearman_nt,0.9999999999999999

@@ -50,10 +50,11 @@ class DGPGenerator:
         if p < 2:
             raise ValueError("p must be at least 2 for interactions model")
         X = np.random.uniform(0, 1, size=(n, 2))
+        X_inter = np.column_stack((X, X[:,0] * X[:,1]))
         betas = DGPGenerator.generate_betas_positive(3)
         epsilon = np.random.normal(0, 0.1, size=n)
         y = betas[0]*X[:,0] + betas[1]*X[:,1]**2 + betas[2]*X[:,0]*X[:,1] + epsilon
-        return X, y, betas
+        return X_inter, y, betas
 
     @staticmethod
     def factor_model(n: int, p: int, k: int = 2):
@@ -64,7 +65,7 @@ class DGPGenerator:
         beta = DGPGenerator.generate_betas_positive(p)
         epsilon = np.random.normal(0, 0.1, size=n)
         y = X @ beta + epsilon
-        return X, y, beta, Lambda
+        return X, y, beta
 
     # -------------------------------------------------------------------------
     # Percent feature impact
@@ -105,8 +106,6 @@ class DGPGenerator:
                 return 100 * coefs * log_X_mean / log_y_mean
         
         elif model_type == 'nonlinear':
-            if X.shape[1] != 2 or coefs.shape[0] != 3:
-                raise ValueError("Nonlinear interactions expects X with 2 columns and coefs length 3")
             x1, x2 = X[:,0], X[:,1]
             term1 = coefs[0]*x1
             term2 = coefs[1]*x2**2
