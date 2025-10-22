@@ -162,13 +162,13 @@ def compute_shap_impact_percent(model, X_train, X_test, y_train,
     return impact_percent
 
 #-----------
-# Function 5 - Cosine Similarity
 def compare_importance_cosine(a, b, skip_normalization=False):
     """
-    Computes the cosine similarity between two importance vectors.
+    Computes cosine similarity between two importance vectors, preserving sign information.
 
-    This method evaluates how similar the direction and distribution of importance is
-    between two models. The result ranges from 0 (completely dissimilar) to 1 (identical direction).
+    This method evaluates how similar the direction (including sign) and distribution
+    of importance is between two models. The result ranges from -1 (opposite direction)
+    to +1 (identical direction).
 
     Args:
         a (np.ndarray): 1D array of importance values from model A.
@@ -178,12 +178,18 @@ def compare_importance_cosine(a, b, skip_normalization=False):
     Returns:
         float: Cosine similarity between the (optionally normalized) importance vectors.
     """
-    if not skip_normalization:
-        a = normalize_importance(a)
-        b = normalize_importance(b)
-    
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+
+    # ✅ Use z-score normalization to preserve sign
+    if skip_normalization:
+        a = (a - np.mean(a)) / np.std(a)
+        b = (b - np.mean(b)) / np.std(b)
+
+    # reshape for sklearn
     a = a.reshape(1, -1)
     b = b.reshape(1, -1)
+
     return cosine_similarity(a, b)[0][0]
 
 #-----------

@@ -1,0 +1,10 @@
+metric,mean,ci_lower,ci_upper,ci_95
+cobb_topk_pair,1.0,,,1.0000 (nan-nan)
+random_topk_pair,0.0,,,0.0000 (nan-nan)
+nn_topk_pair,1.0,,,1.0000 (nan-nan)
+nn_shap_topk_pair,0.0,,,0.0000 (nan-nan)
+nn_shap_topk_pair_ig,0.0,,,0.0000 (nan-nan)
+nn_shap_topk_pair_dl,0.0,,,0.0000 (nan-nan)
+nn_shap_topk_pair_gs,0.0,,,0.0000 (nan-nan)
+nn_shap_topk_pair_fa,0.0,,,0.0000 (nan-nan)
+nn_shap_topk_pair_nt,0.0,,,0.0000 (nan-nan)

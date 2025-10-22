@@ -1,0 +1,3 @@
+metric,mean,ci_lower,ci_upper,ci_95
+mae_nn,0.7038474082946777,,,0.7038 (nan-nan)
+mae_cobb_nn,3.36588716506958,,,3.3659 (nan-nan)

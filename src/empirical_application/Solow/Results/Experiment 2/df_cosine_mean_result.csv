@@ -1,0 +1,10 @@
+metric,mean,ci_lower,ci_upper,ci_95
+cobb_cossine,0.8520788409244626,,,0.8521 (nan-nan)
+random_cossine,-0.21502633976832042,,,-0.2150 (nan-nan)
+nn_cossine,-0.2229321795754155,,,-0.2229 (nan-nan)
+nn_shap_cossine,-0.09663602094640705,,,-0.0966 (nan-nan)
+nn_shap_cossine_ig,-0.31675472938887167,,,-0.3168 (nan-nan)
+nn_shap_cossine_dl,-0.3169786890475424,,,-0.3170 (nan-nan)
+nn_shap_cossine_gs,-0.06348415617381736,,,-0.0635 (nan-nan)
+nn_shap_cossine_fa,-0.2326046775487427,,,-0.2326 (nan-nan)
+nn_shap_cossine_nt,-0.18355817985758005,,,-0.1836 (nan-nan)

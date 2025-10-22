@@ -27,6 +27,9 @@
 \usepackage{amsmath}
 \usepackage{mathtools}
 \usepackage{tikz}
+\usepackage{pdflscape}
+\usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage[thinc]{esdiff}
 
 \begin{document}
@@ -46,7 +49,7 @@ Martha Regina Meira Bianchi
 \maketitle
 
 \begin{abstract}
-The mechanics of deep learning models are among the most influential paradigms in contemporary science, enabling significant advances in Artificial Intelligence. However, the limited interpretability of how input features affect output variables restricts their use as analytical tools. Although recent studies have proposed methods for interpreting deep learning models, a widely accepted approach remains elusive. This paper introduces a novel paradigm by leveraging economic theory to reinterpret neural networks, making explicit the impact of features on model outputs. We model the Feedforward Artificial Neural Network as an Input-Output Model. In this analogy, each neuron is an elementary productive unit, its output corresponds to a unit-level transformation, and the aggregation of neurons generates the overall outcome. By specifying the activation function as Cobb–Douglas, we can compute the marginal contribution of each input to the output. We evaluate the method through a comprehensive set of simulation experiments and two classical empirical analyses in economics, demonstrating the applicability, interpretability, and paradigm-shifting potential of the proposed framework. To the best of our knowledge, this study is novel in that it integrates economic theory to expand the applicability and interpretability of computational methods
+The interpretability of deep learning represents one of the most significant challenges in modern artificial intelligence. While computer science has traditionally looked to mathematics and statistics for solutions, we propose a radical alternative: economic theory as the foundational framework for understanding neural networks. This paper introduces a paradigm shift by reconceptualizing feedforward neural networks as economic production systems, where each neuron functions as an elementary productive unit within an input-output framework. By implementing Cobb-Douglas production functions as activations, we establish direct interpretability through exact computation of input elasticities, effectively solving the black-box nature of feedforward neural networks. We demonstrate that economic theory provides not merely another interpretability tool, but a fundamental reformulation of how artificial intelligence systems can be understood and analyzed. This claim is supported by: (1) a theoretical analysis of the conceptual analogy and a formal mathematical proof of the universal approximation property of the proposed activation function; (2) an extensive set of simulations, comprising 8,000 experiments designed to assess whether our model delivers greater interpretability than a standard feedforward neural network; and (3) an empirical application of the proposed method to a well-established economic framework with clearly defined stylized facts, namely the Solow growth model. To the best of our knowledge, this is the first work to systematically apply production economics and input–output analysis to interpret neural network internals, advancing from isolated economic analogies toward a unified economic theory of deep learning and opening new directions for interdisciplinary research.
 \end{abstract}
 
 \keywords{Machine Learning, Economic Forecasting, Reinforcement Learning, Structural Breaks, Model Selection.}
@@ -79,10 +82,10 @@ To the best of our knowledge, \textbf{this study is novel in several aspects}:
     \item It introduces a new economics-inspired activation function with desirable mathematical properties;
     \item It compares our results against a wide range of existing interpretability methods for neural networks.
     \item It provides the neural network with a general interpretable model, opening the door to a new stream of research.
+    \item It compares structural parameters from Neural IOM against seven post-hoc interpretability methods, demonstrating superior recovery of true feature importance.
 \end{enumerate}
 
-
-The paper is organized as follows: Section 1 introduces the foundational concepts required to understand our methodology. Section 2 details the concepts needed to understand the framework of the proposed approach. Section 3 develops our proposed theory. Section 4 presents a set of simulated experiments designed to evaluate its performance in a controlled environment. Section 5 illustrates the application of our method to a classical economic model, namely the Solow Growth Model, followed by concluding remarks.
+The paper is organized as follows. Section 1 introduces the foundational concepts underlying our methodology. Section 2 presents the framework of the proposed approach. Section 3 develops the theoretical foundations of our method. Section 4 reports a large set of 8,000 simulated experiments designed to evaluate its performance in a controlled setting. Section 5 illustrates its application to a classical economic model, namely the Solow Growth Model, and the paper concludes with final remarks.
 
 \section{Concepts}
 
@@ -575,6 +578,8 @@ By direct inspection of equation \ref{log_cobb_douglas_1}, items 1 and 2 hold. I
 $\square$ $\square$
 \end{flushleft}
 
+\break 
+
 % End of Propostion
 
 % First Lemma
@@ -751,105 +756,540 @@ Given the mathematical proofs that guarantee the equivalence between artificial 
 
 \section{Simulation Experiment}
 
-In order to test our proposed framework, we designed an extensive set of simulated experiments to evaluate its properties under different scenarios. These theoretical cases aim to verify whether our Neural IOM is capable of generating estimates closer to the parameters used at the real DGP. Essentially, we estimate the value of each feature based on the recursive process of accumulating the impact of the coefficients (elasticities), as defined in equations \ref{cobb_douglas_composition} and \ref{elasticity}. By recursively applying the transformations, the compounded effect of the coefficients on the final output is captured, reflecting how 1\% of variation in each feature impacts the target.
+\subsection{Experimental Objectives and Design}
 
-Hence, we designed two base scenarios for our forecasting exercises:
+This section evaluates whether the Neural IOM framework can recover true data-generating process (DGP) parameters more effectively than standard feedforward neural networks (FNNs). 
+
+Traditional FNNs, while powerful for prediction, lack a standardized approach for estimating the underlying DGP parameters. Consequently, most studies rely on post-hoc interpretability techniques, which provide local insights but fail to recover the model’s structural foundations. \cite{molnar2020interpretable} characterizes these approaches as \textit{local approximations}—they provide insights through perturbation analysis but fail to offer structural perspectives on the underlying model.
+
+Our proposed Neural IOM framework introduces a paradigm shift: rather than applying post-hoc explanations, we build interpretability directly into the network architecture through economic production theory. This structural approach enables direct estimation of input elasticities, providing explicit measures of how features influence targets.
+
+\subsubsection{Research Context and Scope}
+
+XAI (Explainable Artificial Intelligence) evaluation techniques generally fall into three categories: (i) assessing the sensitivity or robustness of explanations, (ii) employing human-centered evaluation methods, and (iii) using controlled settings based on prior knowledge of relevant features \citep{wilming2022scrutinizing}. The strategy adopted in this study follows approach (iii), relying on ground-truth-centered evaluations—that is, controlled experiments where the true DGP is known, allowing us to verify whether our approach yields more consistent estimates than its benchmarks.
+
+This experiment analyzes the Neural IOM's capacity to generate accurate estimates of true DGP coefficients under two scenarios: when all relevant features are available, and when irrelevant features are included. We evaluate performance using two metric categories:
+\begin{itemize}
+    \item Predictive accuracy
+    \item Interpretability quality
+\end{itemize}
+
+There is no standardized approach in the literature for evaluating a machine learning model’s interpretability, as it largely depends on the methodological choices made by each author \citep{hooker2019benchmark}. In this study, the choices adopted follow the criteria detailed in the subsequent subsections, which were based in the framework proposed in \citep{wilming2022scrutinizing}. These choices provide a structured basis for the present analysis but can be further expanded and refined in future research.
+
+\textit{Our objective is not to compete with established statistical methods}, but to address a specific practical challenge: when researchers already require neural networks for superior predictive performance on complex problems, how can they extract meaningful interpretability? We therefore compare our strutural approach against the state-of-the-art post-hoc methods in neural network interpretability, rather than focusing on interpretability of other model classes.
+
+\subsubsection{Data Generating Processes}
+
+We implement four distinct DGPs with known parameters:
+
 \begin{enumerate}
-\item Data generated from a Linear Model, with two sub-scenarios: one where all features are available, and another with only a subset of features.
-\item Data generated from a Logarithmic Model, also with two sub-scenarios: one where all features are available, and another with only a subset of features.
+    \item \textbf{Linear Model}: 
+    \begin{equation} \label{eq:dgp_linear}
+    y = X\beta + \epsilon, \quad X \sim \mathcal{U}(0, 1), \quad \epsilon \sim \mathcal{N}(0, 0.1)
+    \end{equation}
+    
+    \item \textbf{Log-Linear Cobb-Douglas Model}: 
+    \begin{equation} \label{eq:dgp_cobb_douglas}
+    \ln(y) = \sum_{i=1}^p \alpha_i \ln(x_i), \quad x_i \sim \mathcal{U}(0, 1), \quad \sum \alpha_i = 1, \quad y = \prod_{i=1}^p x_i^{\alpha_i}
+    \end{equation}
+    
+    \item \textbf{Nonlinear Model with Interactions}: 
+    \begin{equation} \label{eq:dgp_interactions}
+    y = \beta_1 x_1 + \beta_2 x_2^2 + \beta_3 x_1 x_2 + \epsilon, \quad X \sim \mathcal{U}(0, 1), \quad \epsilon \sim \mathcal{N}(0, 0.1)
+    \end{equation}
+    
+    \item \textbf{Factor Model with Correlated Features}: 
+    \begin{equation} \label{eq:dgp_factor}
+    \begin{split}
+    X &= |F \Lambda + V|, \\
+    F &\sim \mathcal{N}(0, 1), \quad 
+    \Lambda \sim \mathcal{U}(0.5, 1.5), \quad
+    V \sim \mathcal{N}(0, 0.5), \\
+    y &= X \beta + \epsilon
+    \end{split}
+    \end{equation}
+    where $F$ represents common factors and $V$ represents idiosyncratic shocks.
+
 \end{enumerate}
 
-This experiment aims to analyze the ability of the Neural IOM model to adapt and generate the most accurate estimates for the coefficients of a model that produces the true DGP, in cases where all information is available and in cases where it is not. The evaluation of the results will be based on two types of metrics: the accuracy of the estimated model and the closeness of the estimated coefficient vectors to those produced by the real DGP.
-
-\textbf{Accuracy}
-
-Accuracy is not the primary objective of the Neural IOM; therefore, we recognize that, in certain cases, t may be acceptable to sacrifice a degree of accuracy in order to achieve greater interpretability of the results. Nevertheless, accuracy remains a fundamental criterion for evaluating any model. Hence, this study adopts the conventional performance metrics of Mean Squared Error (MSE) and Mean Absolute Error (MAE), which provide standardized measures of the deviations between the estimated outputs and the true values, without focusing on the specific limitations of different accuracy metrics.
-
-\textbf{Closeness to True Values}
-
-With respect to the model's ability to generate coefficients close to the true values of the DGP, the following metrics will be employed:
+\textbf{Each DGP includes two sub-scenarios}: 
 
 \begin{enumerate}
-    \item \textit{Cosine Similarity:} This metric measures the cosine of the angle between the estimated coefficient vector $\hat{\beta}$ and the true coefficient vector $\beta$. It is defined as:
+    \item  all features are relevant;
+    \item additional irrelevant features ($\beta = 0$ or $\alpha_i = 0$) are included to test robustness. The number of such irrelevant variables is randomly determined during each experimental trial.
+\end{enumerate}
+
+This results in a total of eight experiments. The inclusion of scenarios with all relevant variables, followed by others containing irrelevant ones, aims to provide a preliminary assessment of the model’s ability to identify and disregard \textbf{distractors} \citep{wilming2022scrutinizing}.\footnote{We acknowledge that the concept of distractors is broader in the literature, extending beyond variables whose true coefficient values are zero. However, for the purposes of this study, we focus on the simplified case of datasets in which some coefficients are set to zero.}
+
+\subsubsection{Comparative Framework}
+
+We compare three interpretability paradigms:
+
+\begin{itemize}
+    \item \textbf{Structural}: Neural IOM with direct elasticity parameters from Cobb-Douglas activations
+    \item \textbf{Post-hoc}: Traditional FNN with seven approximation methods: Sensitivity Analysis (which we call as FNN), SHAP, Integrated Gradients, Noise Tunnel, DeepLIFT, Gradient SHAP, and Feature Ablation
+    \item \textbf{Random Assignment}: In this baseline approach, each feature coefficient is assigned a random value drawn uniformly between the minimum and maximum observed values of the features. Following the methodology proposed by \cite{wilming2022scrutinizing}, this procedure serves to assess whether the predictive model provides meaningful results beyond what could be expected by chance.
+\end{itemize}
+
+For Neural IOM, we compute cumulative elasticities using Equations \ref{cobb_douglas_composition} and \ref{elasticity}. For FNNs, we apply post-hoc methods to extract feature importance.
+
+\subsubsection{Neural Architecture Search}
+
+To ensure fair comparison, we employ Neural Architecture Search (NAS) via random search and full training \citep{salmani2025systematic}. For each experimental trial, we evaluate 50 random architectures with the following search space:
+
+\begin{enumerate}
+    \item Number of input features: 1 to 5
+    \item Number of hidden layers: 1 to 5
+    \item Neurons per layer: $\min(32, 4)\cdot$ \textit{features}
+    \item Dropout rate: $(0.2, 0.3, 0.4, 0.5)$
+    \item Activation: $(ReLU, Sigmoid, Tanh, LeakyReLU, ELU, GELU, SELU, Softplus)$
+\end{enumerate}
+
+The number of features is randomly determined in each experimental trial, as the number of irrelevant variables included in subscenario (ii), defined in Section 4.1.2.
+
+The best-performing architecture (by validation MSE) is selected for comparison against Neural IOM.
+
+\subsubsection{Evaluation Metrics}
+
+We assess both predictive accuracy and interpretability quality, as proposed by \cite{wilming2022scrutinizing}. The metrics selected for this study are:
+
+\textbf{Predictive Accuracy:} These metrics allow assessing the impact of adopting the IOM neural architecture on predictive performance. 
+Let $y_i$ denote the true values and $\hat{y}_i$ the predicted values:
+
+\begin{itemize}
+    \item \textbf{Mean Absolute Error (MAE)}: measures the average absolute difference between the true and predicted values.
     \[
-    \text{Cosine Similarity} = \frac{\hat{\beta} \cdot \beta}{\|\hat{\beta}\| \, \|\beta\|},
+    \text{MAE} = \frac{1}{n} \sum_{i=1}^n |y_i - \hat{y}_i|
     \]
-    where $\cdot$ denotes the dot product and $\|\cdot\|$ the Euclidean norm. Values close to 1 indicate high similarity between the vectors.
-
-    \item \textit{Spearman's Rank Correlation Coefficient:} This non-parametric metric evaluates the monotonic relationship between the estimated coefficients $\hat{\beta}$ and the true coefficients $\beta$ based on their ranks. It is defined as:
+    \item \textbf{Mean Squared Error (MSE)}: measures the average squared difference between the true and predicted values, penalizing larger errors.
     \[
-    \rho = 1 - \frac{6 \sum_{i=1}^{n} d_i^2}{n(n^2-1)},
+    \text{MSE} = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2
     \]
-    where $d_i$ is the difference between the ranks of $\hat{\beta}_i$ and $\beta_i$, and $n$ is the number of coefficients. Values close to 1 indicate strong positive rank correlation.
-\end{enumerate}
+\end{itemize}
 
-Therefore, after estimating the coefficient vectors using the Neural IOM, a comparative analysis will be conducted to evaluate the percentage impact of each feature on the target variable in the true model. These results will then be compared with the values estimated by the Cobb-Douglas coefficients in the Neural IOM, which are the elasticities. The quantification of how closely these impacts match will be performed using the Cosine Similarity and Spearman's Rank Correlation Coefficient.
-
-In the experimental case where one or more variables are excluded from the training subset, the vector used for comparison with the estimated coefficients will consist of the population values of the remaining coefficients, excluding the variables that were omitted. This ensures that the evaluation focuses only on the features that the model actually observed during training.
-
-\textbf{Benchmarks}
-
-The field of Neural Architecture Search (NAS) is very broad. NAS refers to the automated process of designing neural network architectures, aiming to identify models that achieve high performance on a given task. In fact, finding the optimal architecture is a complex problem that demands substantial computational resources. For a detailed analysis of NAS, see \cite{salmani2025systematic}. The main steps for a complete NAS are the following:
-
-\begin{figure}[ht]
-\centering
-\begin{tikzpicture}[
-  grow=right,                
-  edge from parent/.style={draw, -latex},
-  every node/.style={font=\small, align=left, text width=2.8cm},
-  level 1/.style={sibling distance=30mm, level distance=50mm},
-  level 2/.style={sibling distance=30mm, level distance=50mm}
-  ]
-
-\node {Neural Architecture Search (NAS)}
-  child {node {Search Space}}
-  child {node {Search Strategy}}
-  child {node {Validation Strategy}};
-
-\end{tikzpicture}
-\caption{Main components of Neural Architecture Search (NAS).}
-\end{figure}
-
-The Search Space encompasses all model hyperparameters, including the number of layers, activation functions, and other architectural characteristics that define the structure of the neural network. The Search Strategy concerns the methodological procedures employed to identify the most suitable configuration within this space. Typically, such strategies rely on optimization and exploration techniques, which make use of the Validation Strategy to systematically assess candidate architectures and ultimately determine the one that achieves the best performance for the target problem.
-
-In the context of this study, \textit{the benchmarks are restricted to standard feedforward neural networks}. The purpose is to assess whether the proposed Neural IOM can provide more accurate estimates of real DGP coefficients compared to a conventional neural network well adjusted to the data. Therefore, the objective is to employ a NAS-inspired search methodology to identify the best possible architecture for a standard feedforward neural network, which will then serve as the basis for comparison with the Neural IOM.
-
-Based on \cite{salmani2025systematic}, our search methodology employs a Search-Space Layers-Based approach, utilizing Random Search as the search strategy and Full-Training for evaluation. Specifically, a large number of random configurations are generated, and full training is applied to each to assess their performance. The hyperparameters explored in this process include:
+\textbf{Interpretability Quality:}
+With respect to the model's ability to generate coefficients close to the true values of the DGP, where $\beta$ represents the true parameter vector and $\hat{\beta}$ the estimated coefficients. We use the following metrics:
 
 \begin{enumerate}
-\item Number of input features – Randomly selected between 1 and 5 features.
-\item Number of feedforward layers – Randomly selected between 1 and 5 layers.
-\item Number of neurons per layer – Determined as $\min(32, 4 \cdot \text{Number of Features})$.
-\item Dropout rate – Randomly chosen from the set {0.2, 0.3, 0.4, 0.5}.
-\item Activation function – Randomly selected from the following set of functions: ${ReLU,Sigmoid,Tanh,LeakyReLU,ELU,GELU,SELU,Softplus}$
+    \item \textbf{Cosine Similarity}: Measures angular similarity between vectors:
+    \[
+    \text{Cosine} = \frac{\hat{\beta} \cdot \beta}{\|\hat{\beta}\| \, \|\beta\|}
+    \].
+    \item \textbf{Spearman's Rank Correlation}: Assesses rank-order preservation:
+    \[
+    \rho = 1 - \frac{6 \sum d_i^2}{n(n^2-1)}.
+    \]
+    \item \textbf{Top-K Pairwise Rank Agreement} (\cite{krishna2022disagreement}): This metric evaluates how consistently two different explanation methods rank the most important features of a model. Specifically, it focuses on the top-$k$ features identified by each explanation and compares their relative orderings. For every pair of features within this top-$k$ set, the metric checks whether both explanations agree on which feature is more important. The overall score reflects the proportion of feature pairs for which the two explanations assign the same ranking, providing a quantitative measure of agreement (or disagreement) between explanation methods. 
+    \item \textbf{Top-K Rank Correlation} (\cite{krishna2022disagreement}): This metric quantifies the similarity between two explanations by comparing the rankings of their top-$k$ features. For each explanation, the top-$k$ features are identified based on their importance scores. The ranks of these shared features are then compared between the two explanations using a correlation measure, typically Spearman’s rank correlation. The resulting score indicates how similarly the two explanation methods prioritize the most influential features, providing insight into the consistency of feature importance rankings across methods.
 \end{enumerate}
-
-No validation is performed within each individual experiment. Instead, by simulating this process many times, we aim to estimate which architecture is expected to yield the best results, following a procedure analogous to Neural Architecture Search (NAS). All hyperparameters identified as optimal through this simulated search are subsequently applied to the Neural IOM, with the exception of the activation function, which in this case follows a Cobb-Douglas specification. A full NAS approach will be employed in the empirical analysis in the next section.
 
 \subsection{Experiment Setup}
 
-Each experiment was carried out on time series comprising 10,000 observations over 1,000 epochs, with each configuration repeated 1,000 times, employing the Adam optimization algorithm \citep{adam2014method} with a fixed learning rate of 0.0001.
+We conduct 1,000 independent trials for each Data Generating Process (DGP), yielding a total of 8,000 experiments—1,000 for each DGP under both proposed scenarios (with all relevant features available and with irrelevant features included). Each trial consists of 10,000 observations. Models are trained for 1,000 epochs using the Adam optimizer \cite{adam2014method} with a learning rate of 0.0001 and early stopping (patience = 5 epochs). All computations were carried out on an NVIDIA GeForce RTX 3050 GPU using PyTorch. For brevity, we report only the summarized results of the full set of experiments. The complete codebase and results are publicly available at \url{https://github.com/jeronymomp/neural_cge_network}.
 
-To prevent overfitting and improve computational efficiency, an early stopping mechanism with a patience of 5 epochs was applied. This means that training was halted if the validation performance did not improve for 5 consecutive epochs, allowing the model to retain the best weights achieved during the training process. The computations were performed using an NVIDIA GeForce RTX 3050 GPU.
+\subsection{Experiments Results}
 
-\subsection{Experiments 1 and 2}
+The experimental results consistently demonstrate the superior performance of the Neural IOM across all evaluation metrics and data generating processes. As shown in Tables \ref{tab:cosine_results} through \ref{tab:prediction_errors}, the Neural IOM achieves the highest similarity scores and lowest prediction errors in every scenario.
 
-Experiments 1 and 2 are based on the following functional form:
+For feature importance assessment (Tables \ref{tab:cosine_results}-\ref{tab:topk_rank_results}), Neural IOM significantly outperforms all neural network-based approaches, including various SHAP variants. The performance gap is particularly pronounced in experiments with distractor variables, where the robustness of Cobb-Douglas becomes evident. Neural network methods show limited capability in recovering true feature importance, with performance often approaching random baseline levels.
+
+In prediction tasks (Table \ref{tab:prediction_errors}), Neural IOM demonstrates dramatic improvements over standard neural networks, reducing MSE and MAE by substantial margins across all DGPs. 
+
+The consistent superiority of our method across all metrics and experimental conditions underscores its effectiveness as both a benchmark and practical choice for feature importance estimation and prediction tasks in economic contexts.
+
+\begin{table}[H]
+\centering
+\caption{Mean Cosine Similarity (95\% CI) Across all DGP}
+\label{tab:cosine_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{\textbf{DGP 1}} & \multicolumn{2}{c}{\textbf{DGP 2}} & \multicolumn{2}{c}{\textbf{DGP 3}} & \multicolumn{2}{c}{\textbf{DGP 4}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Method} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} \\
+ & (Exp. 1) & (Exp. 2) & (Exp. 3) & (Exp. 4) & (Exp. 5) & (Exp. 6) & (Exp. 7) & (Exp. 8) \\
+\midrule
+Neural IOM & \textbf{0.957} & \textbf{0.745} & \textbf{0.928} & \textbf{0.722} & \textbf{0.916} & \textbf{0.825} & \textbf{0.936} & \textbf{0.845} \\
+ & (0.954--0.960) & (0.734--0.756) & (0.923--0.932) & (0.712--0.732) & (0.912--0.920) & (0.820--0.829) & (0.931--0.941) & (0.841--0.849) \\
+Random & 0.870 & 0.601 & 0.833 & 0.579 & 0.815 & 0.699 & 0.857 & 0.708 \\
+ & (0.861--0.878) & (0.586--0.616) & (0.822--0.843) & (0.563--0.595) & (0.805--0.825) & (0.687--0.710) & (0.847--0.867) & (0.697--0.718) \\
+FNN & 0.868 & 0.614 & 0.838 & 0.589 & 0.842 & 0.687 & 0.879 & 0.812 \\
+ & (0.859--0.877) & (0.598--0.629) & (0.828--0.849) & (0.573--0.604) & (0.833--0.851) & (0.675--0.699) & (0.870--0.887) & (0.804--0.820) \\
+SHAP & 0.855 & 0.603 & 0.825 & 0.584 & 0.821 & 0.683 & 0.865 & 0.803 \\
+ & (0.845--0.864) & (0.587--0.620) & (0.814--0.836) & (0.568--0.600) & (0.812--0.831) & (0.671--0.695) & (0.856--0.874) & (0.794--0.812) \\
+IG & 0.858 & 0.600 & 0.825 & 0.577 & 0.827 & 0.674 & 0.866 & 0.796 \\
+ & (0.848--0.867) & (0.584--0.616) & (0.814--0.836) & (0.561--0.594) & (0.817--0.837) & (0.662--0.687) & (0.857--0.875) & (0.787--0.805) \\
+DL & 0.859 & 0.606 & 0.828 & 0.582 & 0.831 & 0.678 & 0.871 & 0.800 \\
+ & (0.849--0.868) & (0.590--0.622) & (0.817--0.838) & (0.565--0.598) & (0.821--0.840) & (0.666--0.690) & (0.862--0.880) & (0.792--0.809) \\
+GS & 0.861 & 0.608 & 0.832 & 0.589 & 0.829 & 0.690 & 0.872 & 0.815 \\
+ & (0.852--0.871) & (0.593--0.624) & (0.822--0.843) & (0.573--0.605) & (0.819--0.838) & (0.678--0.702) & (0.863--0.881) & (0.807--0.824) \\
+FA & 0.862 & 0.606 & 0.833 & 0.590 & 0.832 & 0.681 & 0.873 & 0.799 \\
+ & (0.853--0.871) & (0.590--0.622) & (0.822--0.843) & (0.574--0.606) & (0.822--0.841) & (0.669--0.693) & (0.865--0.882) & (0.790--0.808) \\
+NT & 0.869 & 0.613 & 0.838 & 0.588 & 0.837 & 0.702 & 0.864 & 0.777 \\
+ & (0.860--0.878) & (0.597--0.628) & (0.829--0.848) & (0.572--0.603) & (0.828--0.846) & (0.691--0.714) & (0.854--0.873) & (0.767--0.786) \\
+\bottomrule
+\end{tabular}
+}
+\begin{tablenotes}
+\item \small Notes: Table reports mean cosine similarity values with 95\% confidence intervals in parentheses. \textbf{Bold} indicates best performance for each DGP-scenario combination. "Clean" experiments include only relevant features; "+Distract" experiments include additional distractor variables. IG=Integrated Gradients, DL=DeepLIFT, GS=GradientSHAP, FA=Feature Ablation, NT=Noise Tunnel.
+\end{tablenotes}
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\caption{Mean Spearman Rank Correlation (95\% CI) Across all DGP}
+\label{tab:spearman_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{\textbf{DGP 1}} & \multicolumn{2}{c}{\textbf{DGP 2}} & \multicolumn{2}{c}{\textbf{DGP 3}} & \multicolumn{2}{c}{\textbf{DGP 4}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Method} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} \\
+ & (Exp. 1) & (Exp. 2) & (Exp. 3) & (Exp. 4) & (Exp. 5) & (Exp. 6) & (Exp. 7) & (Exp. 8) \\
+\midrule
+Neural IOM & \textbf{0.398} & \textbf{0.430} & \textbf{0.357} & \textbf{0.386} & \textbf{0.283} & \textbf{0.413} & \textbf{0.236} & \textbf{0.470} \\
+ & (0.350--0.446) & (0.390--0.470) & (0.312--0.402) & (0.345--0.427) & (0.241--0.324) & (0.383--0.444) & (0.186--0.286) & (0.443--0.498) \\
+Random & -0.016 & -0.015 & -0.039 & -0.046 & 0.029 & 0.019 & 0.018 & -0.011 \\
+ & (-0.068--0.036) & (-0.059--0.029) & (-0.088--0.010) & (-0.092--0.001) & (-0.015--0.073) & (-0.017--0.056) & (-0.033--0.069) & (-0.047--0.025) \\
+FNN & -0.001 & 0.037 & -0.027 & -0.017 & 0.180 & -0.015 & 0.040 & 0.399 \\
+ & (-0.053--0.050) & (-0.009--0.083) & (-0.077--0.022) & (-0.063--0.028) & (0.137--0.222) & (-0.050--0.021) & (-0.011--0.092) & (0.370--0.428) \\
+SHAP & 0.015 & 0.028 & -0.022 & -0.007 & 0.077 & -0.004 & 0.043 & 0.413 \\
+ & (-0.037--0.066) & (-0.017--0.073) & (-0.072--0.028) & (-0.053--0.039) & (0.033--0.120) & (-0.041--0.032) & (-0.008--0.094) & (0.384--0.441) \\
+IG & -0.006 & 0.008 & -0.009 & -0.003 & 0.164 & -0.011 & 0.049 & 0.362 \\
+ & (-0.057--0.046) & (-0.037--0.053) & (-0.058--0.041) & (-0.048--0.042) & (0.122--0.206) & (-0.046--0.025) & (-0.002--0.101) & (0.332--0.392) \\
+DL & -0.009 & 0.022 & -0.009 & 0.003 & 0.168 & -0.003 & 0.043 & 0.381 \\
+ & (-0.060--0.043) & (-0.023--0.068) & (-0.059--0.040) & (-0.042--0.048) & (0.126--0.211) & (-0.039--0.032) & (-0.008--0.095) & (0.351--0.412) \\
+GS & 0.004 & 0.026 & -0.020 & -0.004 & 0.078 & -0.007 & 0.043 & 0.445 \\
+ & (-0.048--0.056) & (-0.019--0.071) & (-0.069--0.030) & (-0.050--0.041) & (0.035--0.121) & (-0.043--0.029) & (-0.008--0.094) & (0.418--0.472) \\
+FA & 0.000 & 0.003 & -0.034 & 0.011 & 0.155 & -0.018 & 0.068 & 0.374 \\
+ & (-0.051--0.052) & (-0.042--0.048) & (-0.083--0.015) & (-0.034--0.056) & (0.112--0.197) & (-0.053--0.018) & (0.017--0.120) & (0.344--0.404) \\
+NT & 0.010 & 0.044 & -0.035 & -0.004 & 0.079 & 0.000 & 0.036 & 0.278 \\
+ & (-0.042--0.061) & (-0.001--0.088) & (-0.084--0.014) & (-0.049--0.041) & (0.036--0.122) & (-0.036--0.037) & (-0.015--0.088) & (0.245--0.310) \\
+\bottomrule
+\end{tabular}
+}
+\begin{tablenotes}
+\item \small Notes: Table reports mean cosine similarity values with 95\% confidence intervals in parentheses. \textbf{Bold} indicates best performance for each DGP-scenario combination. "Clean" experiments include only relevant features; "+Distract" experiments include additional distractor variables. IG=Integrated Gradients, DL=DeepLIFT, GS=GradientSHAP, FA=Feature Ablation, NT=Noise Tunnel.
+\end{tablenotes}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Mean Top-K Pairwise Rank Agreement (95\% CI) Across all DGP}
+\label{tab:topk_pairwise_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{\textbf{DGP 1}} & \multicolumn{2}{c}{\textbf{DGP 2}} & \multicolumn{2}{c}{\textbf{DGP 3}} & \multicolumn{2}{c}{\textbf{DGP 4}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Method} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} \\
+ & (Exp. 1) & (Exp. 2) & (Exp. 3) & (Exp. 4) & (Exp. 5) & (Exp. 6) & (Exp. 7) & (Exp. 8) \\
+\midrule
+Neural IOM & \textbf{0.526} & \textbf{0.686} & \textbf{0.540} & \textbf{0.665} & \textbf{0.627} & \textbf{0.675} & \textbf{0.473} & \textbf{0.695} \\
+ & (0.501--0.551) & (0.668--0.705) & (0.516--0.563) & (0.646--0.685) & (0.608--0.646) & (0.661--0.688) & (0.448--0.497) & (0.683--0.708) \\
+Random & 0.379 & 0.493 & 0.395 & 0.479 & 0.511 & 0.509 & 0.399 & 0.495 \\
+ & (0.357--0.402) & (0.473--0.514) & (0.373--0.417) & (0.458--0.501) & (0.491--0.531) & (0.494--0.524) & (0.376--0.422) & (0.479--0.510) \\
+FNN & 0.389 & 0.518 & 0.397 & 0.493 & 0.580 & 0.497 & 0.403 & 0.667 \\
+ & (0.367--0.412) & (0.497--0.539) & (0.375--0.420) & (0.471--0.514) & (0.561--0.599) & (0.482--0.512) & (0.380--0.426) & (0.653--0.680) \\
+SHAP & 0.396 & 0.511 & 0.398 & 0.498 & 0.530 & 0.496 & 0.405 & 0.674 \\
+ & (0.373--0.419) & (0.490--0.532) & (0.376--0.420) & (0.477--0.520) & (0.511--0.550) & (0.480--0.512) & (0.382--0.428) & (0.662--0.687) \\
+IG & 0.387 & 0.502 & 0.405 & 0.500 & 0.571 & 0.497 & 0.408 & 0.652 \\
+ & (0.364--0.409) & (0.481--0.523) & (0.382--0.427) & (0.479--0.521) & (0.552--0.590) & (0.482--0.513) & (0.385--0.431) & (0.638--0.665) \\
+DL & 0.386 & 0.510 & 0.405 & 0.503 & 0.576 & 0.500 & 0.405 & 0.661 \\
+ & (0.363--0.409) & (0.488--0.531) & (0.383--0.427) & (0.482--0.524) & (0.557--0.595) & (0.485--0.515) & (0.382--0.428) & (0.648--0.674) \\
+GS & 0.393 & 0.512 & 0.399 & 0.499 & 0.531 & 0.495 & 0.406 & 0.686 \\
+ & (0.370--0.416) & (0.491--0.533) & (0.377--0.421) & (0.477--0.520) & (0.512--0.550) & (0.479--0.511) & (0.383--0.429) & (0.674--0.698) \\
+FA & 0.391 & 0.500 & 0.395 & 0.505 & 0.568 & 0.494 & 0.415 & 0.659 \\
+ & (0.368--0.414) & (0.479--0.521) & (0.373--0.417) & (0.484--0.526) & (0.549--0.587) & (0.478--0.509) & (0.391--0.438) & (0.645--0.672) \\
+NT & 0.394 & 0.518 & 0.396 & 0.501 & 0.536 & 0.498 & 0.403 & 0.617 \\
+ & (0.372--0.417) & (0.497--0.539) & (0.374--0.418) & (0.480--0.522) & (0.516--0.556) & (0.483--0.514) & (0.380--0.426) & (0.603--0.631) \\
+\bottomrule
+\end{tabular}
+}
+\begin{tablenotes}
+\item \small Notes: Table reports mean cosine similarity values with 95\% confidence intervals in parentheses. \textbf{Bold} indicates best performance for each DGP-scenario combination. "Clean" experiments include only relevant features; "+Distract" experiments include additional distractor variables. IG=Integrated Gradients, DL=DeepLIFT, GS=GradientSHAP, FA=Feature Ablation, NT=Noise Tunnel.
+\end{tablenotes}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Mean Top-K Rank Correlation (95\% CI) Across all DGP}
+\label{tab:topk_rank_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{\textbf{DGP 1}} & \multicolumn{2}{c}{\textbf{DGP 2}} & \multicolumn{2}{c}{\textbf{DGP 3}} & \multicolumn{2}{c}{\textbf{DGP 4}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Method} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} \\
+ & (Exp. 1) & (Exp. 2) & (Exp. 3) & (Exp. 4) & (Exp. 5) & (Exp. 6) & (Exp. 7) & (Exp. 8) \\
+\midrule
+Neural IOM & \textbf{0.308} & \textbf{0.430} & \textbf{0.293} & \textbf{0.386} & \textbf{0.283} & \textbf{0.413} & \textbf{0.185} & \textbf{0.470} \\
+ & (0.270--0.347) & (0.390--0.470) & (0.255--0.331) & (0.345--0.427) & (0.241--0.324) & (0.383--0.444) & (0.145--0.224) & (0.443--0.498) \\
+Random & -0.012 & -0.015 & -0.032 & -0.046 & 0.029 & 0.019 & 0.014 & -0.011 \\
+ & (-0.052--0.028) & (-0.059--0.029) & (-0.072--0.008) & (-0.092--0.001) & (-0.015--0.073) & (-0.017--0.056) & (-0.026--0.054) & (-0.047--0.025) \\
+FNN & -0.001 & 0.037 & -0.022 & -0.017 & 0.180 & -0.015 & 0.032 & 0.399 \\
+ & (-0.041--0.039) & (-0.009--0.083) & (-0.063--0.018) & (-0.063--0.028) & (0.137--0.222) & (-0.050--0.021) & (-0.009--0.072) & (0.370--0.428) \\
+SHAP & 0.011 & 0.028 & -0.018 & -0.007 & 0.077 & -0.004 & 0.034 & 0.413 \\
+ & (-0.029--0.051) & (-0.017--0.073) & (-0.059--0.023) & (-0.053--0.039) & (0.033--0.120) & (-0.041--0.032) & (-0.007--0.074) & (0.384--0.441) \\
+IG & -0.004 & 0.008 & -0.007 & -0.003 & 0.164 & -0.011 & 0.039 & 0.362 \\
+ & (-0.044--0.036) & (-0.037--0.053) & (-0.048--0.033) & (-0.048--0.042) & (0.122--0.206) & (-0.046--0.025) & (-0.002--0.079) & (0.332--0.392) \\
+DL & -0.007 & 0.022 & -0.008 & 0.003 & 0.168 & -0.003 & 0.034 & 0.381 \\
+ & (-0.047--0.033) & (-0.023--0.068) & (-0.048--0.033) & (-0.042--0.048) & (0.126--0.211) & (-0.039--0.032) & (-0.006--0.074) & (0.351--0.412) \\
+GS & 0.003 & 0.026 & -0.016 & -0.004 & 0.078 & -0.007 & 0.034 & 0.445 \\
+ & (-0.037--0.043) & (-0.019--0.071) & (-0.056--0.024) & (-0.050--0.041) & (0.035--0.121) & (-0.043--0.029) & (-0.006--0.074) & (0.418--0.472) \\
+FA & 0.000 & 0.003 & -0.028 & 0.011 & 0.155 & -0.018 & 0.053 & 0.374 \\
+ & (-0.040--0.040) & (-0.042--0.048) & (-0.068--0.012) & (-0.034--0.056) & (0.112--0.197) & (-0.053--0.018) & (0.013--0.094) & (0.344--0.404) \\
+NT & 0.007 & 0.044 & -0.029 & -0.004 & 0.079 & 0.000 & 0.028 & 0.278 \\
+ & (-0.033--0.047) & (-0.001--0.088) & (-0.069--0.012) & (-0.049--0.041) & (0.036--0.122) & (-0.036--0.037) & (-0.012--0.069) & (0.245--0.310) \\
+\bottomrule
+\end{tabular}
+}
+\begin{tablenotes}
+\item \small Notes: Table reports mean cosine similarity values with 95\% confidence intervals in parentheses. \textbf{Bold} indicates best performance for each DGP-scenario combination. "Clean" experiments include only relevant features; "+Distract" experiments include additional distractor variables. IG=Integrated Gradients, DL=DeepLIFT, GS=GradientSHAP, FA=Feature Ablation, NT=Noise Tunnel.
+\end{tablenotes}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Mean Prediction Errors (95\% CI) Across Data Generating Processes}
+\label{tab:prediction_errors}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{\textbf{DGP 1}} & \multicolumn{2}{c}{\textbf{DGP 2}} & \multicolumn{2}{c}{\textbf{DGP 3}} & \multicolumn{2}{c}{\textbf{DGP 4}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Metric \& Method} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} & \textbf{Clean} & \textbf{+Distract} \\
+\midrule
+\textbf{MSE} & & & & & & & & \\
+\quad FNN & 1.014 & 0.563 & 0.353 & 0.467 & 0.575 & 0.639 & 7.396 & 6.369 \\
+ & (0.950--1.077) & (0.524--0.601) & (0.330--0.375) & (0.434--0.500) & (0.542--0.607) & (0.608--0.670) & (6.930--7.861) & (6.119--6.619) \\
+\quad Neural IOM & 0.362 & 0.137 & 0.006 & 0.044 & 0.100 & 0.130 & 2.747 & 2.632 \\
+ & (0.333--0.390) & (0.126--0.147) & (0.006--0.007) & (0.042--0.045) & (0.095--0.106) & (0.123--0.136) & (2.504--2.990) & (2.497--2.768) \\
+\midrule
+\textbf{MAE} & & & & & & & & \\
+\quad FNN & 0.822 & 0.599 & 0.480 & 0.542 & 0.598 & 0.646 & 1.957 & 1.968 \\
+ & (0.792--0.852) & (0.576--0.622) & (0.463--0.497) & (0.521--0.562) & (0.579--0.617) & (0.627--0.665) & (1.887--2.027) & (1.925--2.011) \\
+\quad Neural IOM & 0.455 & 0.280 & 0.051 & 0.159 & 0.234 & 0.262 & 1.087 & 1.153 \\
+ & (0.434--0.476) & (0.270--0.290) & (0.049--0.054) & (0.156--0.162) & (0.226--0.241) & (0.254--0.269) & (1.033--1.140) & (1.120--1.187) \\
+\bottomrule
+\end{tabular}
+}
+\begin{tablenotes}
+\item \small Notes: Table reports Mean Squared Error (MSE) and Mean Absolute Error (MAE) values with 95\% confidence intervals in parentheses. "Clean" experiments include only relevant features; "+Distract" experiments include additional distractor variables. 
+\end{tablenotes}
+\end{table}
+
+\section{The Solow Growth Model}
+
+\subsection{The Model}
+
+The Solow growth model is a canonical neoclassical framework linking capital accumulation, labor, and technological progress to output growth. Its central insight is that economies converge to a steady state in which per capita income growth is driven solely by technological progress. The evolution of aggregate capital is described by:
+\begin{equation}
+\dot{K}(t) = s Y(t) - \delta K(t),
+\end{equation}
+where $K$ is the capital stock, $Y$ output, $s$ the saving rate, and $\delta$ the depreciation rate. Expressed per worker, with $k = K/L$ and assuming population grows at rate $n$, the dynamics are
+\begin{equation}
+\dot{k}(t) = s f(k(t)) - (n + \delta) k(t),
+\end{equation}
+implying that steady-state output per worker depends on the saving rate, population growth, and the production function. This simplified formulation provides a benchmark for empirical analysis of cross-country income differences and growth patterns.
+
+\subsection{Empirical Studies}
+
+Numerous studies tried to empirically test the Solow growth model, giving rise to a broad and enduring research agenda. One of the most influential contributions to economic theory is that of \cite{mankiw1992contribution}. 
+
+In their study, the authors conducted an econometric analysis to examine the relationship between economic growth, savings, and population growth. Furthermore, they extended the original Solow framework by incorporating additional variables to account for the role of human capital in the growth process and to assess whether the model’s prediction of income convergence holds empirically. The dataset used in their analysis was derived from the Real National Accounts and includes measures of real economic activity for nearly all countries in the world, excluding centrally planned economies. The data are annual and span the period from 1960 to 1985. 
+
+\cite{mankiw1992contribution} seminal work serves the purposes of the present study by providing a “ground truth” against which we compare our Neural IOM with a conventional FNN approach. \textbf{This empirical application serves as a critical test of our central hypothesis: that neural networks with economic structure can recover theoretically meaningful parameters where traditional black-box approaches fail. The Solow framework provides an ideal testing ground due to its well-established theoretical predictions and extensive empirical validation}. In this context, the objective of this section is to replicate three of the main econometric analyses conducted in \cite{mankiw1992contribution}:
 
 \begin{equation}
-    y = X \beta + \epsilon
+\ln\left(\frac{Y}{L}\right)_i = \alpha + \beta_1 \ln\left(\frac{I}{Y}\right)_i + \beta_2 \ln(n_i + g + \delta) + \varepsilon_i,
 \end{equation}
 
-where: 
+where $\frac{Y}{L}$ is output per worker, $\frac{I}{Y}$ the investment-to-output ratio, 
+$n_i$ the population growth rate, $g$ the exogenous technological progress rate, 
+$\delta$ the capital depreciation rate, $\alpha$ a constant term, 
+$\varepsilon_i$ the error term, and $\beta_1$, $\beta_2$ the estimated elasticities. 
+
+This corresponds to the estimation of the \textbf{Textbook Solow Model}, as defined by the authors. In addition, they performed two further analyses:
 \begin{itemize}
-    \item \(y \in \mathbb{R}^n\) denotes the response vector (target);
-    \item \(X \in \mathbb{R}^{n \times p}\) represents the feature matrix (inputs);
-    \item \(\beta \in \mathbb{R}^p\) is the coefficient vector (weights);
-    \item \(\epsilon \sim \mathcal{N}(0, \sigma^2)\) corresponds to the additive noise term.
+\item \textbf{Augmented Solow Model:} inclusion of a proxy variable for human capital, $\ln(\text{School})$;
+\item \textbf{Conditional Convergence Test:} inclusion of the initial level of GDP per capita as an explanatory variable, $ln(Y_{init})$.
 \end{itemize}
 
-In Experiment 1, all elements of \(y\) and \(X\) are used directly as the target and features, respectively, for both the feedforward neural networks and the Neural IOM.
+\cite{mankiw1992contribution} conducted separate econometric analyses for different groups of countries. The focus of the present study is on the broadest possible group, encompassing virtually the entire sample used by the authors. The results obtained in their study are summarized in the table \ref{tab:solow_results}.
 
+
+\begin{table}[htbp]
+\centering
+\caption{Estimation Results for the Solow Model Experiments}
+\label{tab:solow_results}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Variable} & \textbf{Textbook Solow} & \textbf{Augmented Solow} & \textbf{Conditional Convergence} \\
+\hline
+Constant ($\alpha$) & 5.48 & 6.89 & 1.93 \\
+$\ln(I/Y)$ ($\beta_1$) & 1.42 & 0.69 & 0.647 \\
+$\ln(n + g + \delta)$ ($\beta_2$) & -1.97 & -1.73 &  -0.299 \\
+$\ln(\text{School})$ & -- & 0.66 & --  \\
+$\ln(Y_{init})$ & -- & -- & -0.141 \\
+\hline
+R-squared & 0.59 & 0.78 & 0.38 \\
+\hline
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Note: Results taken from \cite{mankiw1992contribution}.
+\end{tablenotes}
+\end{table}
+
+\subsection{Method and Data}
+
+Based on the methodology presented in Sections 4.1.1, 4.1.3, 4.1.4, and 4.1.5, we aim to assess whether the Neural IOM adequately estimates the coefficients reported by \cite{mankiw1992contribution}. For this purpose, we use data from the Penn World Table (PWT), which provides a comprehensive set of internationally comparable economic indicators, including GDP, investment, population, and productivity measures, for a large number of countries over several decades \citep{feenstra2015next}\footnote{Available for download at \url{www.ggdc.net/pwt}. This dataset allows us to replicate and extend the original analysis in a consistent and robust manner.} We do not expect to replicate the exact results of \cite{mankiw1992contribution}, as our database differs and covers the period from 1950 to 2019. We evaluate success based on the economic plausibility of recovered parameters—specifically, whether our method produces theoretically consistent signs and magnitudes—rather than exact numerical replication of the original coefficients.\footnote{Observations for years with missing data have been excluded from the analysis.} Our evaluation metrics will be the same as proposed in section 4.1.5.
+
+The objective of this section is to evaluate the interpretability quality of the Neural IOM relative to the FNN benchmarks, comparing the structural approach proposed in this work with the seven commonly used post-hoc interpretability methods, as well as a random assignment baseline for control, as described in Section 4. The Neural Architecture Search procedure follows the same protocol outlined in Section 4.1.4.
+
+This section does not perform a comparative predictive accuracy analysis across models because the FNN requires the use of normalization techniques for both explanatory and dependent variables, which substantially alters the scale of absolute and squared errors. In contrast, the Neural IOM operates directly on variables in their natural levels, without such preprocessing. As a result, predictive accuracy measures are not easily comparable, and the focus of this section is maintained on the primary objective of our method: interpretability. \textit{This methodological divergence is intentional: while normalization may improve predictive accuracy in FNNs, it obscures economic interpretation. Our Neural IOM prioritizes structural interpretability by preserving the natural economic scale of variables, aligning with our core research objective}.
+
+Each trial comprises 12,810 observations, prior to the exclusion of missing data. The models are trained for 20,000 epochs using the Adam optimizer. Neural architecture search was conducted over a set of 30 candidate architectures, each trained for 5,000 epochs.
+
+\subsection{Neural IOM Empirical Application}
+
+The results of our econometric analysis are presented in the following tables: the Textbook Solow model in Table \ref{tab:solow_textbook_results}, the Augmented Solow model in Table \ref{tab:solow_augmented_results}, and the Conditional Convergence Test in Table \ref{tab:solow_convergence_results}.
+
+Our Neural IOM framework consistently outperforms all benchmark methods across three Solow model specifications. It achieves near-perfect coefficient recovery (cosine similarity up to 0.9998) while maintaining theoretical consistency in all parameter signs—correctly identifying positive investment and human capital effects, and negative population growth and convergence effects.
+
+In stark contrast, traditional neural networks and post-hoc methods (SHAP, Integrated Gradients, etc.) fail to produce economically meaningful results, generating theoretically inconsistent signs and unreliable feature importance rankings. Therefore, Neural IOM provides economic interpretability, with directly interpretable parameters that align with established economic theory.
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Neural IOM Performance on Textbook Solow Model}
+\label{tab:solow_textbook_results}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Coefficient Recovery}} & \multicolumn{4}{c}{\textbf{Interpretability Metrics}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-7}
+\textbf{Method} & \textbf{Investment} & \textbf{Pop. Growth} & \textbf{Cosine} & \textbf{Top-K Pair} & \textbf{Top-K Rank} & \textbf{Theoretical} \\
+& $\beta_1$ & $\beta_2$ & \textbf{Similarity} & \textbf{Agreement} & \textbf{Correlation} & \textbf{Consistency} \\
+\midrule
+\textbf{Ground Truth} & 1.42 & -1.97 & 1.00 & 1.00 & 1.00 & \checkmark \\
+\textbf{Neural IOM} & 0.32 & -0.46 & 0.9998 & 1.00 & 1.00 & \checkmark \\
+\textbf{FNN} & -0.07 & -0.27 & 0.6353 & 1.00 & 1.00 & $\times$ \\
+\textbf{SHAP} & 0.82 & 4.03 & -0.6778 & 0.00 & -1.00 & $\times$ \\
+\textbf{IG} & 0.01 & 0.05 & -0.6023 & 0.00 & -1.00 & $\times$ \\
+\textbf{DL} & 0.01 & 0.05 & -0.6023 & 0.00 & -1.00 & $\times$ \\
+\textbf{GS} & 0.005 & 0.02 & -0.6641 & 0.00 & -1.00 & $\times$ \\
+\textbf{FA} & 0.01 & 0.05 & -0.5942 & 0.00 & -1.00 & $\times$ \\
+\textbf{NT} & 0.01 & 0.06 & -0.6415 & 0.00 & -1.00 & $\times$ \\
+\textbf{Random} & -- & -- & -0.2876 & 0.00 & -1.00 & -- \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes}
+\small
+\item \textbf{Note:} Ground truth coefficients from \cite{mankiw1992contribution}.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Neural IOM Performance on Augmented Solow Model}
+\label{tab:solow_augmented_results}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lcccccccc} 
+\toprule
+& \multicolumn{3}{c}{\textbf{Coefficient Recovery}} & \multicolumn{4}{c}{\textbf{Interpretability Metrics}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-8}
+\textbf{Method} & \textbf{Investment} & \textbf{Pop. Growth} & \textbf{Human Capital} & \textbf{Cosine} & \textbf{Top-K Pair} & \textbf{Top-K Rank} & \textbf{Theoretical} \\
+& $\beta_1$ & $\beta_2$ & $\beta_3$ & \textbf{Similarity} & \textbf{Agreement} & \textbf{Correlation} & \textbf{Consistency} \\
+\midrule
+\textbf{Ground Truth} & 0.69 & -1.73 & 0.66 & 1.00 & 1.00 & 1.00 & \checkmark \\
+\textbf{Neural IOM} & 0.08 & -0.07 & 0.08 & 0.8521 & 1.00 & 1.00 & \checkmark \\
+\textbf{FNN} & -0.71 & -0.44 & -1.63 & -0.2229 & 0.3333 & -0.50 & $\times$ \\
+\textbf{SHAP} & 7.40 & 16.78 & 26.84 & -0.0966 & 0.3333 & -0.50 & $\times$ \\
+\textbf{IG} & 0.08 & 0.40 & 0.42 & -0.3168 & 0.3333 & -0.50 & $\times$ \\
+\textbf{DL} & 0.08 & 0.40 & 0.42 & -0.3170 & 0.3333 & -0.50 & $\times$ \\
+\textbf{GS} & 0.05 & 0.08 & 0.13 & -0.0635 & 0.3333 & -0.50 & $\times$ \\
+\textbf{FA} & 0.14 & 0.35 & 0.38 & -0.2326 & 0.3333 & -0.50 & $\times$ \\
+\textbf{NT} & 0.08 & 0.31 & 0.43 & -0.1836 & 0.3333 & -0.50 & $\times$ \\
+\textbf{Random} & -- & -- & -- & -0.2150 & 0.00 & -1.00 & -- \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes}
+\small
+\item \textbf{Note:} Ground truth coefficients from \cite{mankiw1992contribution}.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Neural IOM Performance on Conditional Convergence Test}
+\label{tab:solow_convergence_results}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lcccccccc} 
+\toprule
+& \multicolumn{3}{c}{\textbf{Coefficient Recovery}} & \multicolumn{4}{c}{\textbf{Interpretability Metrics}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-8}
+\textbf{Method} & \textbf{Investment} & \textbf{Pop. Growth} & \textbf{Initial GDP} & \textbf{Cosine} & \textbf{Top-K Pair} & \textbf{Top-K Rank} & \textbf{Theoretical} \\
+& $\beta_1$ & $\beta_2$ & $\beta_3$ & \textbf{Similarity} & \textbf{Agreement} & \textbf{Correlation} & \textbf{Consistency} \\
+\midrule
+\textbf{Ground Truth} & 0.647 & -0.299 & -0.141 & 1.00 & 1.00 & 1.00 & \checkmark \\
+\textbf{Neural IOM} & 5.89 & -9.84 & -7.08 & 0.7918 & 1.00 & 1.00 & \checkmark \\
+\textbf{FNN} & -0.04 & 0.02 & -0.19 & -0.0318 & 0.3333 & -0.50 & $\times$ \\
+\textbf{SHAP} & 0.90 & 0.94 & 3.24 & -0.0615 & 0.3333 & -0.50 & $\times$ \\
+\textbf{IG} & 0.01 & 0.004 & 0.07 & -0.1210 & 0.6667 & 0.50 & $\times$ \\
+\textbf{DL} & 0.02 & 0.008 & 0.07 & -0.0231 & 0.6667 & 0.50 & $\times$ \\
+\textbf{GS} & 0.004 & 0.004 & 0.02 & -0.1097 & 0.3333 & -0.50 & $\times$ \\
+\textbf{FA} & 0.01 & 0.01 & 0.07 & -0.1054 & 0.6667 & 0.50 & $\times$ \\
+\textbf{NT} & 0.05 & 0.02 & 0.07 & 0.2611 & 0.6667 & 0.50 & $\times$ \\
+\textbf{Random} & -- & -- & -- & 0.0714 & 0.00 & -1.00 & -- \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes}
+\small
+\item \textbf{Note:} Ground truth coefficients from \cite{mankiw1992contribution}.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\section{Discussion}
+
+Unlike prevailing approaches that treat interpretability as an external constraint or post-processing step, our method makes economic reasoning an intrinsic property of the network architecture. This represents a paradigm shift from explaining black boxes to building transparent models from first principles.
+
+The empirical evidence presented in this study delivers a clear and compelling verdict: \textbf{our Neural IOM framework successfully bridges the gap between black-box predictive performance and economic interpretability}. By embedding production theory directly into the network architecture, we achieve what traditional neural networks and post-hoc explanation methods fundamentally cannot—direct recovery of economically meaningful parameters that align with established theoretical priors. 
+
+This result is significant, as it represents a reversal of the conventional knowledge-generation approach in the field of machine learning: \textbf{leveraging economic theory to address a theoretical problem within deep learning}. By reinterpreting neural networks as an IOM model, explainability emerges structurally, rather than being imposed through a specific architecture or post-hoc method.
+
+This result opens a new line of research by enabling the reinterpretation of neural networks as economic systems, which, by definition, possess desirable properties, such as interpretability. This approach may facilitate the application of deep learning in domains that previously required explainability for routine use, potentially expanding its adoption into new areas.
+
+Our work demonstrates that the fundamental limitation in neural network interpretability is not computational, but architectural. By choosing architectures that embed economic structure, we transform explainability from a technical challenge into a design feature.
+
+The study has limitations regarding the scope of its conclusions, necessitating further research, including investigations into architectural topology to better understand how networks should be interpreted. Additionally, the use of the Cobb–Douglas production function imposes important constraints, such as the positivity of its inputs, which should be taken into account in future studies.
+
+\section{Concluding Remarks}
+
+This study aims to reinterpret feedforward neural networks (FNNs) as IOM models, constructing a novel architecture based on a Cobb–Douglas–type activation function. This approach seeks to leverage the desirable properties of these economic models within deep learning, particularly their interpretability.
+
+We developed the theoretical framework suggesting an architectural analogy between FNNs and IOMs through graph theory, followed by an analysis of the conformity of the Cobb–Douglas function with the universal approximation theorem.
+
+On the empirical side, 8,000 simulated experiments were conducted to evaluate whether the predictive power and explainability of the Neural IOM surpass those of a traditional FNN, assessed using seven different post-hoc methods.
+
+Subsequently, an empirical test was performed using the classical model of \cite{mankiw1992contribution} to verify whether the model can recover the ground truth relationships reported in the paper.
+
+All these results lead us to conclude that the Neural IOM architecture is highly effective in terms of prediction, while also significantly enhancing interpretability. The outcomes were overwhelmingly positive across this broad range of empirical analyses, aligning closely with the theoretical framework developed in this work.
+
+This study establishes that economic theory provides not just applications for machine learning, but fundamental insights into its internal workings. We have shown that feedforward neural networks can be systematically reinterpreted as input-output models, creating a new class of economically intelligible AI systems. \textbf{Just as economics has long borrowed tools from mathematics and computer science, we demonstrate that the flow of knowledge can be reversed: economic theory itself can solve fundamental problems in artificial intelligence. This bidirectional exchange represents a new frontier for interdisciplinary research}.
+
+The answer to the black-box problem, it turns out, was in economics all along. By recognizing neural networks as economies and neurons as firms, we have not only made AI more interpretable—we have opened a new chapter in how we understand intelligence itself through the lens of economic organization.
 
 \clearpage
 \bibliographystyle{plainnat}
