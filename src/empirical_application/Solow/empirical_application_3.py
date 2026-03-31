@@ -1,7 +1,7 @@
 #--------
 # Working Directory
 import os
-wkdir = "/home/jeronymo/Documentos/neural_cge_network"
+wkdir = "/home/jeronymo/Downloads/neural_cge_network"
 os.chdir(wkdir)
 
 # =============================================================================
@@ -54,12 +54,13 @@ n_years = end_year - start_year
 
 #--------
 # Neural Network Parameters
-epochs_nas = 5000
-epochs = 20000
+epochs_nas = 1000
+epochs = 10000
 # neural_network_hidden_layers = [4,3]
 learning_rate = 0.00001
-learning_rate_cobb = 0.001
+learning_rate_cobb = 0.0001
 tries_before_stopping = 5
+
 
 #--------
 # Cobb-Douglas Neural Network Parameters
@@ -85,7 +86,7 @@ torch.backends.cudnn.benchmark = False     # Disable Non Deterministic
 # 3 - Import PWT Data
 # =============================================================================
 # 3.1 - OS
-wkdir = "/home/jeronymo/Documentos/neural_cge_network/src/empirical_application"
+wkdir = "/home/jeronymo/Downloads/neural_cge_network/src/empirical_application"
 os.chdir(wkdir)
 
 # 3.2 - Country COdes
@@ -611,7 +612,7 @@ result_list.append(lst_result)
 df, df_cosine_ci, df_spearman_ci, df_mae_ci, df_mse_ci, df_topk_pair_ci, df_topk_rank_ci = generate_average_metrics_with_ci(result_list)
 
 # Save results
-wkdir = "/home/jeronymo/Documentos/neural_cge_network/src/empirical_application/Solow/Results/Experiment 3"
+wkdir = "/home/jeronymo/Downloads/neural_cge_network/src/empirical_application/Solow/Results/Experiment 3"
 os.chdir(wkdir)
 
 df.to_csv('simulation_result.csv', index=False)
@@ -646,6 +647,66 @@ df_coef = pd.DataFrame({
 })
 
 df_coef.to_csv("coefficients.csv", index=False)
+
+# =============================================================================
+# 12 - Comparative Statics (Shock Experiment)
+# =============================================================================
+# Base point (mean of the sample)
+base_x = ln_X_test.mean(axis=0).astype(np.float32)
+base_x_tensor = torch.tensor(base_x).unsqueeze(0).to(device)
+
+# Shock grid (non-marginal)
+shock_values = np.linspace(-0.2, 0.2, 9)  # -20% to +20%
+
+responses_fnn = []
+responses_cobb = []
+
+for shock in shock_values:
+    
+    # Clone base input
+    shocked_x = base_x.copy()
+    
+    # Apply shock to ln(s) (investment)
+    shocked_x[0] = shocked_x[0] + shock
+    
+    shocked_x_tensor = torch.tensor(shocked_x).unsqueeze(0).to(device)
+
+    # FNN prediction
+    y_base_fnn = fnn_model(base_x_tensor).item()
+    y_shock_fnn = fnn_model(shocked_x_tensor).item()
+    responses_fnn.append(y_shock_fnn - y_base_fnn)
+
+    # Cobb-Douglas prediction (note: uses non-log inputs)
+    base_x_cobb = X_test.mean(axis=0).astype(np.float32)
+    shocked_x_cobb = base_x_cobb.copy()
+    
+    # Apply multiplicative shock in levels
+    shocked_x_cobb[0] = shocked_x_cobb[0] * np.exp(shock)
+
+    base_x_cobb_tensor = torch.tensor(base_x_cobb).unsqueeze(0).to(device)
+    shocked_x_cobb_tensor = torch.tensor(shocked_x_cobb).unsqueeze(0).to(device)
+
+    y_base_cobb = cobb_model(base_x_cobb_tensor).item()
+    y_shock_cobb = cobb_model(shocked_x_cobb_tensor).item()
+    responses_cobb.append(y_shock_cobb - y_base_cobb)
+    
+# ------------
+# Plot Results
+plt.figure()
+
+plt.plot(shock_values, responses_fnn, marker='o', label='FNN')
+plt.plot(shock_values, responses_cobb, marker='o', label='Neural IOM (Cobb)')
+plt.axhline(0)
+
+plt.xlabel("Shock in ln(I/Y)")
+plt.ylabel("Change in predicted output")
+plt.legend()
+plt.title("Comparative Statics: Response to Investment Shock")
+
+# salvar antes do show
+plt.savefig("comparative_statics_application_1.png", dpi=300, bbox_inches='tight')
+
+plt.show()
 
 # =============================================================================
 # =============================================================================
