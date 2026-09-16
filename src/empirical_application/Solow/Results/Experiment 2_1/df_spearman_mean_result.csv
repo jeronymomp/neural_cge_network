@@ -1,0 +1,10 @@
+metric,mean,ci_lower,ci_upper,ci_95
+cobb_spearman,0.9999999999999999,,,1.0000 (nan-nan)
+random_spearman,-0.9999999999999999,,,-1.0000 (nan-nan)
+nn_spearman,0.9999999999999999,,,1.0000 (nan-nan)
+nn_shap_spearman,-0.9999999999999999,,,-1.0000 (nan-nan)
+nn_shap_spearman_ig,0.9999999999999999,,,1.0000 (nan-nan)
+nn_shap_spearman_dl,0.9999999999999999,,,1.0000 (nan-nan)
+nn_shap_spearman_gs,-0.9999999999999999,,,-1.0000 (nan-nan)
+nn_shap_spearman_fa,0.9999999999999999,,,1.0000 (nan-nan)
+nn_shap_spearman_nt,0.9999999999999999,,,1.0000 (nan-nan)

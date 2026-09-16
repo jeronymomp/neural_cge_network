@@ -147,7 +147,9 @@ y = reg_df["ln_Y_per_L"]
 ln_X = reg_df[["ln_s","ln_n"]]
 ln_y = reg_df["ln_Y_per_L"]
 
-# 3.8 Prepare data. Only IN-Sample - For Cobb DOuglas
+# 3.8 Prepare data. Only IN-Sample - For Cobb Douglas
+# NOTE: X_full / X_train / X_test are in LEVELS (s, n) — required because
+# CobbDouglasLogActivationFunction applies ln() internally.
 y_full = y.values.reshape(-1, 1).astype(np.float32)
 X_full = X.values.astype(np.float32)
 
@@ -169,6 +171,24 @@ X_test_tensor  = X_tensor
 y_train_tensor = y_tensor.reshape(-1, 1)
 y_valid_tensor = y_tensor.reshape(-1, 1)
 y_test_tensor  = y_tensor.reshape(-1, 1)
+
+# --- FIX: target in LEVELS for the Cobb-Douglas NN -------------------------
+# CobbDouglasLogActivationFunction returns exp(sum alpha * ln x), i.e. a
+# level-space prediction. It must therefore be trained/evaluated against
+# Y_per_L in levels, not ln(Y_per_L).
+y_level = reg_df["Y_per_L"]
+y_level_full = y_level.values.reshape(-1, 1).astype(np.float32)
+
+y_level_tensor = torch.from_numpy(y_level_full).to(device)
+
+y_level_train = y_level_full.copy()
+y_level_valid = y_level_full.copy()
+y_level_test  = y_level_full.copy()
+
+y_level_train_tensor = y_level_tensor.reshape(-1, 1)
+y_level_valid_tensor = y_level_tensor.reshape(-1, 1)
+y_level_test_tensor  = y_level_tensor.reshape(-1, 1)
+# -----------------------------------------------------------------------------
 
 # 3.9 Prepare data. Only IN-Sample - For FNN
 ln_y_full = ln_y.values.reshape(-1, 1).astype(np.float32)
@@ -239,6 +259,9 @@ def generate_random_config(number_of_features):
 random_configs = [generate_random_config(number_of_features) for _ in range(n_samples)]
 
 # 5.3 Apply Random search on Base NN Architecture
+# --- FIX: this block searches architectures for the plain FNN benchmark,
+# so it must use FlexibleNeuralNetwork on the ln_X/ln_y data (log space),
+# not LogCobbDouglasNeuralNetwork. (Restored to the correct model/data.)
 result_random_search = []
 
 for random_param in random_configs:
@@ -304,11 +327,14 @@ def generate_random_cobb_config(number_of_features):
 # 7.2 Generate n samples
 random_configs = [generate_random_config(number_of_features) for _ in range(n_samples)]
 
-# 7.3 Apply Random search on Base NN Architecture
+# 7.3 Apply Random search on Cobb-Douglas NN Architecture
+# --- FIX: use LEVEL-space inputs (X_*) and LEVEL-space target (y_level_*),
+# since CobbDouglasLogActivationFunction applies ln() to its inputs itself
+# and outputs a level-space prediction (exp(...)).
 result_random_search_cobb = []
 
 for random_param in random_configs:
-    cobb_fnn = LogCobbDouglasNeuralNetwork(ln_X_train, ln_X_valid, ln_X_test, ln_y_train, ln_y_valid, ln_y_test, device = device)
+    cobb_fnn = LogCobbDouglasNeuralNetwork(X_train, X_valid, X_test, y_level_train, y_level_valid, y_level_test, device = device)
 
     cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
     hidden_layers=random_param['neural_network_hidden_layers'],
@@ -322,7 +348,7 @@ for random_param in random_configs:
 
     cobb_model.to(device)
     predicted_cobb = cobb_model(X_test_tensor).detach().cpu().numpy()
-    mse_cobb = mean_squared_error(y_test, predicted_cobb)
+    mse_cobb = mean_squared_error(y_level_test, predicted_cobb)
     result_random_search_cobb.append(mse_cobb)
 
 # 7.4 Best result
@@ -335,7 +361,8 @@ cobb_dropout_rt = random_configs[best_cobb_architecture]['dropout']
 # =============================================================================
 # 8 - Cobb-Douglas Neural Network
 # =============================================================================
-cobb_fnn = LogCobbDouglasNeuralNetwork(ln_X_train, ln_X_valid, ln_X_test, ln_y_train, ln_y_valid, ln_y_test, device = device)
+# --- FIX: train on LEVEL-space X and LEVEL-space y (see note in Section 7.3) ---
+cobb_fnn = LogCobbDouglasNeuralNetwork(X_train, X_valid, X_test, y_level_train, y_level_valid, y_level_test, device = device)
 
 cobb_model, cobb_train_losses, cobb_val_losses, cobb_best_val_loss, cobb_test_loss, cobb_architecture, cobb_weights = cobb_fnn.train_model(
 hidden_layers=cobb_hidden_layers,
@@ -352,21 +379,22 @@ cobb_model.to(device)
 # =============================================================================
 # 9 - Accuracy
 # =============================================================================
-# X_test_tensor is already on device
+# X_test_tensor is already on device (levels, as required by the Cobb-Douglas NN)
 predicted_cobb_nn = cobb_model(X_test_tensor).detach().cpu().numpy()
-predicted_nn = fnn_model(ln_X_test_tensor).detach().cpu().numpy()
+predicted_nn_level = np.exp(predicted_nn)
 
 # Mean Absolute Error
-mae_nn = mean_absolute_error(ln_y_test, predicted_nn)
-mae_cobb_nn = mean_absolute_error(y_test, predicted_cobb_nn)
+mae_nn = mean_absolute_error(y_level_test, predicted_nn_level)
+# --- FIX: compare against y_level_test (levels), not y_test (which held ln_Y_per_L) ---
+mae_cobb_nn = mean_absolute_error(y_level_test, predicted_cobb_nn)
 
 # Mean Squared Error
-mse_nn = mean_squared_error(ln_y_test, predicted_nn)
-mse_cobb_nn = mean_squared_error(y_test, predicted_cobb_nn)
+mse_nn = mean_squared_error(y_level_test, predicted_nn_level)
+mse_cobb_nn = mean_squared_error(y_level_test, predicted_cobb_nn)
 
 # R Squared
-r2_cobb = r2_score(y_test, predicted_cobb_nn)
-r2_nn = r2_score(ln_y_test, predicted_nn)
+r2_cobb = r2_score(y_level_test, predicted_cobb_nn)
+r2_nn = r2_score(y_level_test, predicted_nn_level)
 
 # =============================================================================
 # 10 - Sensitivity Analysis
@@ -452,7 +480,7 @@ neural_network_feature_impact = np.array(neural_network_feature_impact, dtype=fl
 shap_impact_percent = np.array(shap_impact_percent, dtype=float).ravel()
 
 # Taken from literature
-real_feature_impact = np.array([1.42, -1.97])
+real_feature_impact = model.coef_.flatten()
 
 # Coob Douglas Results
 cobb_spearman = compare_importance_spearman(real_feature_impact, cobb_douglas_feature_impact)

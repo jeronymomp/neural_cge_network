@@ -1,0 +1,14 @@
+Experiment 1
+FNN   -> MSE: 1.1375  MAE: 0.8493  R2: 0.2434
+Cobb  -> MSE: 1.0371  MAE: 0.7660  R2: 0.3102
+OLS   -> MSE: 1.0371  MAE: 0.7660  R2: 0.3102
+
+Experiment 2
+FNN   -> MSE: 0.6858  MAE: 0.6055  R2: 0.5701
+Cobb  -> MSE: 0.6603  MAE: 0.5690  R2: 0.5860
+OLS   -> MSE: 0.5398  MAE: 0.5308  R2: 0.6616
+
+Experiment 3
+FNN   -> MSE: 0.2873  MAE: 0.4428  R2: 0.8199
+Cobb  -> MSE: 0.1601  MAE: 0.2991  R2: 0.8996
+OLS   -> MSE: 0.1605  MAE: 0.3004  R2: 0.8994

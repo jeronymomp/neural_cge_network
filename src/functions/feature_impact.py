@@ -68,6 +68,9 @@ def cobb_douglas_impact(layers_exponents, feature_index, normalize=False):
     Args:
         layers_exponents (list of np.ndarray): List of exponent matrices (alphas) for each layer,
                                                where each matrix is of shape (output_dim, input_dim).
+                                               These should be the EFFECTIVE (post-softmax, if the
+                                               model was trained with normalized=1) exponents — see
+                                               model_alphas().
         feature_index (int): Index of the input feature to compute the impact for.
         normalize (bool): If True, returns the normalized impact (between 0 and 1) relative
                           to the total impact of all features.
@@ -93,24 +96,53 @@ def cobb_douglas_impact(layers_exponents, feature_index, normalize=False):
 
 #-----------
 # Function 3 - Extraction of alphas
-def model_alphas(model_state_dict):
+def model_alphas(model_state_dict, normalized=True):
     """
-    Extracts all Cobb-Douglas exponent parameters ('alphas') from a model's state dictionary.
+    Extracts the EFFECTIVE Cobb-Douglas exponent matrices ('alphas') from a model's
+    state dictionary.
 
-    It looks for all keys in the state dict that include the string "alphas",
-    assuming they correspond to layers of type CobbDouglasActivationFunction.
+    --- FIX -------------------------------------------------------------------
+    CobbDouglasLogActivationFunction.forward() computes:
+        alphas = softmax(self.alphas, dim=1)   if normalized == 1 (as passed to
+                                                 train_model)
+        alphas = self.alphas                    if normalized == 0
+    but `self.alphas` (the raw, PRE-softmax parameter) is what actually gets
+    stored in state_dict(). Previously this function returned those raw
+    logits directly — which are unconstrained real numbers (can be negative,
+    do not sum to 1) and have NO elasticity interpretation. This silently
+    broke every downstream elasticity/impact computation whenever the model
+    was trained with normalized=1 (the empirically better-performing
+    setting).
+
+    This version applies the SAME transformation used in forward() before
+    returning the exponents, so what comes out here matches what the network
+    actually used to produce its predictions.
 
     Args:
         model_state_dict (OrderedDict): The state dictionary from a PyTorch model,
                                         typically obtained via model.state_dict().
+        normalized (bool): Must match the `normalized` flag used when the model
+                        was trained (e.g. sum_equal_one in the calling script).
+                        If True, applies softmax(dim=1) to each raw alpha
+                        matrix (replicating the CRS-constrained forward pass).
+                        If False, returns the raw parameters unchanged (they
+                        were already used unconstrained in the forward pass).
+    -----------------------------------------------------------------------------
 
     Returns:
-        list of np.ndarray: A list containing the exponent matrices (alphas) for each layer.
+        list of np.ndarray: A list containing the EFFECTIVE exponent matrices
+                             (alphas) for each layer, i.e. the same values the
+                             network used internally during its forward pass.
     """
     alphas = []
     for key in model_state_dict:
         if "alphas" in key:
-            alphas.append(model_state_dict[key].cpu().numpy())
+            raw = model_state_dict[key].cpu()
+            if normalized:
+                eff = torch.softmax(raw, dim=1)
+            else:
+                eff = raw
+            alphas.append(eff.numpy())
     return alphas
 
 #-----------
@@ -247,6 +279,11 @@ def cobb_douglas_log_impact(layers_exponents, feature_index, normalize=False):
     of multiplicative ones. The feature impact is propagated through each layer by matrix 
     multiplication, simulating the effect of a unit feature signal.
 
+    NOTE: `layers_exponents` must be the EFFECTIVE exponent matrices (i.e. already
+    passed through model_alphas() with the correct `normalized` flag matching how
+    the model was trained). Passing raw, pre-softmax parameters here will silently
+    produce meaningless elasticities.
+
     Args:
         layers_exponents (list of np.ndarray): A list of exponent matrices (alphas) 
             for each layer of the network. Each matrix should have shape 
@@ -347,4 +384,3 @@ def topk_rank_correlation(Ea, Eb, k):
 
 # =============================================================================
 # =============================================================================
-
